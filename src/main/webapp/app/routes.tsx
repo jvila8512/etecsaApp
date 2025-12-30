@@ -18,6 +18,7 @@ import ErrorBoundaryRoutes from 'app/shared/error/error-boundary-routes';
 import PageNotFound from 'app/shared/error/page-not-found';
 import { AUTHORITIES } from 'app/config/constants';
 import { sendActivity } from 'app/config/websocket-middleware';
+import GeneradoresDashboard from './modules/generadores/GeneradoresDashboard';
 
 const loading = <div>loading ...</div>;
 
@@ -41,6 +42,7 @@ const AppRoutes = () => {
         <Route index element={<Home />} />
         <Route path="login" element={<Login />} />
         <Route path="logout" element={<Logout />} />
+        <Route path="generadores" element={<GeneradoresDashboard />} />
         <Route path="account">
           <Route
             path="*"
@@ -51,6 +53,7 @@ const AppRoutes = () => {
             }
           />
           <Route path="register" element={<Register />} />
+
           <Route path="activate" element={<Activate />} />
           <Route path="reset">
             <Route path="request" element={<PasswordResetInit />} />

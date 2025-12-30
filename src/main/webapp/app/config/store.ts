@@ -7,6 +7,7 @@ import errorMiddleware from './error-middleware';
 import notificationMiddleware from './notification-middleware';
 import loggerMiddleware from './logger-middleware';
 import websocketMiddleware from './websocket-middleware';
+import generadoresWebsocketMiddleware from '../websocket/generadores-websocket-middleware'; //
 
 const store = configureStore({
   reducer: sharedReducers,
@@ -16,7 +17,14 @@ const store = configureStore({
         // Ignore these field paths in all actions
         ignoredActionPaths: ['meta.arg', 'meta.baseQueryMeta', 'payload.config', 'payload.request', 'payload.headers', 'error'],
       },
-    }).concat(errorMiddleware, notificationMiddleware, loadingBarMiddleware(), websocketMiddleware, loggerMiddleware),
+    }).concat(
+      errorMiddleware,
+      notificationMiddleware,
+      loadingBarMiddleware(),
+      websocketMiddleware,
+      loggerMiddleware,
+      generadoresWebsocketMiddleware,
+    ),
 });
 
 const getStore = () => store;

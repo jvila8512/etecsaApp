@@ -91,6 +91,7 @@ export default tseslint.config(
     files: ['src/main/webapp/**/*.spec.ts'],
     rules: {
       '@typescript-eslint/no-empty-function': 'off',
+      'prettier/prettier': 'error',
     },
   },
   // jhipster-needle-eslint-add-config - JHipster will add additional config here

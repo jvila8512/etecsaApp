@@ -9,12 +9,14 @@ import Metrics from './metrics/metrics';
 import Configuration from './configuration/configuration';
 import Docs from './docs/docs';
 import Tracker from './tracker/tracker';
+import GeneradoresDashboard from '../generadores/GeneradoresDashboard';
 
 const AdministrationRoutes = () => (
   <div>
     <ErrorBoundaryRoutes>
       <Route path="user-management/*" element={<UserManagement />} />
       <Route path="tracker" element={<Tracker />} />
+      <Route path="generadores" element={<GeneradoresDashboard />} />
       <Route path="health" element={<Health />} />
       <Route path="metrics" element={<Metrics />} />
       <Route path="configuration" element={<Configuration />} />

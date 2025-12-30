@@ -29,7 +29,8 @@ public class WebsocketConfiguration implements WebSocketMessageBrokerConfigurer 
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic");
+        // ✅ CORREGIDO: Un solo enableSimpleBroker con TODOS los prefijos
+        config.enableSimpleBroker("/topic", "/topic/generadores");
     }
 
     @Override
@@ -37,6 +38,16 @@ public class WebsocketConfiguration implements WebSocketMessageBrokerConfigurer 
         String[] allowedOrigins = Optional.ofNullable(jHipsterProperties.getCors().getAllowedOrigins())
             .map(origins -> origins.toArray(new String[0]))
             .orElse(new String[0]);
+
+        // Endpoint específico para generadores
+        registry
+            .addEndpoint("/websocket/generadores")
+            .setHandshakeHandler(defaultHandshakeHandler())
+            .setAllowedOrigins(allowedOrigins)
+            .withSockJS()
+            .setInterceptors(httpSessionHandshakeInterceptor());
+
+        // Mantener el endpoint original de tracker
         registry
             .addEndpoint("/websocket/tracker")
             .setHandshakeHandler(defaultHandshakeHandler())
