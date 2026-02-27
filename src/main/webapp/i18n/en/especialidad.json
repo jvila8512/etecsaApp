@@ -1,0 +1,27 @@
+{
+  "appsupervisorApp": {
+    "especialidad": {
+      "home": {
+        "title": "Especialidads",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Especialidad",
+        "createOrEditLabel": "Create or edit a Especialidad",
+        "notFound": "No Especialidads found"
+      },
+      "created": "A new Especialidad is created with identifier {{ param }}",
+      "updated": "A Especialidad is updated with identifier {{ param }}",
+      "deleted": "A Especialidad is deleted with identifier {{ param }}",
+      "delete": {
+        "question": "Are you sure you want to delete Especialidad {{ id }}?"
+      },
+      "detail": {
+        "title": "Especialidad"
+      },
+      "id": "ID",
+      "nombre": "Nombre",
+      "codigo": "Codigo",
+      "descripcionTecnica": "Descripcion Tecnica",
+      "equipos": "Equipos"
+    }
+  }
+}

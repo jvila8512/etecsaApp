@@ -1,0 +1,7 @@
+export enum TipoRegistro {
+  BIT_LOGICO_M = 'BIT_LOGICO_M',
+
+  PALABRA_MW = 'PALABRA_MW',
+
+  PALABRA_DOBLE_MD = 'PALABRA_DOBLE_MD',
+}

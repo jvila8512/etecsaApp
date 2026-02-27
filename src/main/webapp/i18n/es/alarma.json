@@ -1,0 +1,31 @@
+{
+  "appsupervisorApp": {
+    "alarma": {
+      "home": {
+        "title": "Alarmas",
+        "refreshListLabel": "Refrescar lista",
+        "createLabel": "Crear nuevo Alarma",
+        "createOrEditLabel": "Crear o editar Alarma",
+        "notFound": "Ningún Alarmas encontrado"
+      },
+      "created": "Un nuevo Alarma ha sido creado con el identificador {{ param }}",
+      "updated": "Un Alarma ha sido actualizado con el identificador {{ param }}",
+      "deleted": "Un Alarma ha sido eliminado con el identificador {{ param }}",
+      "delete": {
+        "question": "¿Seguro que quiere eliminar Alarma {{ id }}?"
+      },
+      "detail": {
+        "title": "Alarma"
+      },
+      "id": "ID",
+      "descripcion": "Descripcion",
+      "activatedAt": "Activated At",
+      "deactivatedAt": "Deactivated At",
+      "severidad": "Severidad",
+      "estado": "Estado",
+      "mensajeUsuario": "Mensaje Usuario",
+      "evento": "Evento",
+      "acknowledgedBy": "Acknowledged By"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "appsupervisorApp": {
+    "Severidad": {
+      "null": "",
+      "BAJA": "BAJA",
+      "MEDIA": "MEDIA",
+      "ALTA": "ALTA",
+      "CRITICA": "CRITICA"
+    }
+  }
+}

@@ -50,6 +50,14 @@ public class CacheConfiguration {
             createCache(cm, com.etecsa.domain.User.class.getName());
             createCache(cm, com.etecsa.domain.Authority.class.getName());
             createCache(cm, com.etecsa.domain.User.class.getName() + ".authorities");
+            createCache(cm, com.etecsa.domain.Sitio.class.getName());
+            createCache(cm, com.etecsa.domain.Equipo.class.getName());
+            createCache(cm, com.etecsa.domain.Equipo.class.getName() + ".especialidades");
+            createCache(cm, com.etecsa.domain.Especialidad.class.getName());
+            createCache(cm, com.etecsa.domain.Especialidad.class.getName() + ".equipos");
+            createCache(cm, com.etecsa.domain.EventoEquipo.class.getName());
+            createCache(cm, com.etecsa.domain.EventoPlantilla.class.getName());
+            createCache(cm, com.etecsa.domain.Alarma.class.getName());
             // jhipster-needle-ehcache-add-entry
         };
     }

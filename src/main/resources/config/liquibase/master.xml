@@ -3,16 +3,29 @@
     xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
-    <property name="now" value="now()" dbms="mysql"/>
-    <property name="floatType" value="float" dbms="mysql"/>
-    <property name="clobType" value="clob" dbms="mysql"/>
-    <property name="blobType" value="longblob" dbms="mysql"/>
-    <property name="uuidType" value="varchar(36)" dbms="mysql"/>
-    <property name="datetimeType" value="datetime(6)" dbms="mysql"/>
-    <property name="timeType" value="time(6)" dbms="mysql"/>
+
+
+
+    <property name="now" value="now()" dbms="mysql,mariadb"/>
+    <property name="floatType" value="float" dbms="mysql,mariadb"/>
+    <property name="clobType" value="clob" dbms="mysql,mariadb"/>
+    <property name="blobType" value="longblob" dbms="mysql,mariadb"/>
+    <property name="uuidType" value="varchar(36)" dbms="mysql,mariadb"/>
+    <property name="datetimeType" value="datetime(6)" dbms="mysql,mariadb"/>
+    <property name="timeType" value="time(6)" dbms="mysql,mariadb"/>
 
     <include file="config/liquibase/changelog/00000000000000_initial_schema.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260227164311_added_entity_Sitio.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260227164312_added_entity_Equipo.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260227164313_added_entity_Especialidad.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260227164314_added_entity_EventoEquipo.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260227164315_added_entity_EventoPlantilla.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260227164316_added_entity_Alarma.xml" relativeToChangelogFile="false"/>
     <!-- jhipster-needle-liquibase-add-changelog - JHipster will add liquibase changelogs here -->
+    <include file="config/liquibase/changelog/20260227164312_added_entity_constraints_Equipo.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260227164314_added_entity_constraints_EventoEquipo.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260227164315_added_entity_constraints_EventoPlantilla.xml" relativeToChangelogFile="false"/>
+    <include file="config/liquibase/changelog/20260227164316_added_entity_constraints_Alarma.xml" relativeToChangelogFile="false"/>
     <!-- jhipster-needle-liquibase-add-constraints-changelog - JHipster will add liquibase constraints changelogs here -->
     <!-- jhipster-needle-liquibase-add-incremental-changelog - JHipster will add incremental liquibase changelogs here -->
 </databaseChangeLog>

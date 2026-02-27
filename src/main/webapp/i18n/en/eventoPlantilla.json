@@ -1,0 +1,30 @@
+{
+  "appsupervisorApp": {
+    "eventoPlantilla": {
+      "home": {
+        "title": "Evento Plantillas",
+        "refreshListLabel": "Refresh list",
+        "createLabel": "Create a new Evento Plantilla",
+        "createOrEditLabel": "Create or edit a Evento Plantilla",
+        "notFound": "No Evento Plantillas found"
+      },
+      "created": "A new Evento Plantilla is created with identifier {{ param }}",
+      "updated": "A Evento Plantilla is updated with identifier {{ param }}",
+      "deleted": "A Evento Plantilla is deleted with identifier {{ param }}",
+      "delete": {
+        "question": "Are you sure you want to delete Evento Plantilla {{ id }}?"
+      },
+      "detail": {
+        "title": "Evento Plantilla"
+      },
+      "id": "ID",
+      "nombre": "Nombre",
+      "descripcion": "Descripcion",
+      "scalingFactor": "Scaling Factor",
+      "unidadMedida": "Unidad Medida",
+      "funcionLectura": "Funcion Lectura",
+      "funcionEscritura": "Funcion Escritura",
+      "especialidad": "Especialidad"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "appsupervisorApp": {
+    "EstadoAlarma": {
+      "null": "",
+      "ACTIVA": "ACTIVA",
+      "RECONOCIDA": "RECONOCIDA",
+      "FINALIZADA": "FINALIZADA"
+    }
+  }
+}

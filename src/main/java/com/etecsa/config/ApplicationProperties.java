@@ -3,7 +3,7 @@ package com.etecsa.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Properties specific to Controlsuper.
+ * Properties specific to Appsupervisor.
  * <p>
  * Properties are configured in the {@code application.yml} file.
  * See {@link tech.jhipster.config.JHipsterProperties} for a good example.

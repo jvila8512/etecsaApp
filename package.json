@@ -1,8 +1,8 @@
 {
-  "name": "controlsuper",
+  "name": "appsupervisor",
   "version": "0.0.1-SNAPSHOT",
   "private": true,
-  "description": "Description for Controlsuper",
+  "description": "Description for Appsupervisor",
   "license": "UNLICENSED",
   "scripts": {
     "app:start": "./mvnw -ntp --batch-mode",

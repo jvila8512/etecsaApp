@@ -1,0 +1,270 @@
+import React, { useEffect } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Button, Col, Row } from 'reactstrap';
+import { Translate, ValidatedField, ValidatedForm, isNumber, translate } from 'react-jhipster';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+
+import { convertDateTimeFromServer, convertDateTimeToServer, displayDefaultDateTime } from 'app/shared/util/date-utils';
+import { useAppDispatch, useAppSelector } from 'app/config/store';
+
+import { getEntities as getEquipos } from 'app/entities/equipo/equipo.reducer';
+import { getEntities as getEventoPlantillas } from 'app/entities/evento-plantilla/evento-plantilla.reducer';
+import { TipoRegistro } from 'app/shared/model/enumerations/tipo-registro.model';
+import { TipoDato } from 'app/shared/model/enumerations/tipo-dato.model';
+import { createEntity, getEntity, reset, updateEntity } from './evento-equipo.reducer';
+
+export const EventoEquipoUpdate = () => {
+  const dispatch = useAppDispatch();
+
+  const navigate = useNavigate();
+
+  const { id } = useParams<'id'>();
+  const isNew = id === undefined;
+
+  const equipos = useAppSelector(state => state.equipo.entities);
+  const eventoPlantillas = useAppSelector(state => state.eventoPlantilla.entities);
+  const eventoEquipoEntity = useAppSelector(state => state.eventoEquipo.entity);
+  const loading = useAppSelector(state => state.eventoEquipo.loading);
+  const updating = useAppSelector(state => state.eventoEquipo.updating);
+  const updateSuccess = useAppSelector(state => state.eventoEquipo.updateSuccess);
+  const tipoRegistroValues = Object.keys(TipoRegistro);
+  const tipoDatoValues = Object.keys(TipoDato);
+
+  const handleClose = () => {
+    navigate(`/evento-equipo${location.search}`);
+  };
+
+  useEffect(() => {
+    if (isNew) {
+      dispatch(reset());
+    } else {
+      dispatch(getEntity(id));
+    }
+
+    dispatch(getEquipos({}));
+    dispatch(getEventoPlantillas({}));
+  }, []);
+
+  useEffect(() => {
+    if (updateSuccess) {
+      handleClose();
+    }
+  }, [updateSuccess]);
+
+  const saveEntity = values => {
+    if (values.id !== undefined && typeof values.id !== 'number') {
+      values.id = Number(values.id);
+    }
+    if (values.direccionModbus !== undefined && typeof values.direccionModbus !== 'number') {
+      values.direccionModbus = Number(values.direccionModbus);
+    }
+    if (values.valorNumerico !== undefined && typeof values.valorNumerico !== 'number') {
+      values.valorNumerico = Number(values.valorNumerico);
+    }
+    values.timestampActualizacion = convertDateTimeToServer(values.timestampActualizacion);
+    if (values.intervaloLectura !== undefined && typeof values.intervaloLectura !== 'number') {
+      values.intervaloLectura = Number(values.intervaloLectura);
+    }
+    if (values.umbralAlerta !== undefined && typeof values.umbralAlerta !== 'number') {
+      values.umbralAlerta = Number(values.umbralAlerta);
+    }
+
+    const entity = {
+      ...eventoEquipoEntity,
+      ...values,
+      equipo: equipos.find(it => it.id.toString() === values.equipo?.toString()),
+      plantilla: eventoPlantillas.find(it => it.id.toString() === values.plantilla?.toString()),
+    };
+
+    if (isNew) {
+      dispatch(createEntity(entity));
+    } else {
+      dispatch(updateEntity(entity));
+    }
+  };
+
+  const defaultValues = () =>
+    isNew
+      ? {
+          timestampActualizacion: displayDefaultDateTime(),
+        }
+      : {
+          tipoRegistro: 'BIT_LOGICO_M',
+          tipoDato: 'BOOLEAN',
+          ...eventoEquipoEntity,
+          timestampActualizacion: convertDateTimeFromServer(eventoEquipoEntity.timestampActualizacion),
+          equipo: eventoEquipoEntity?.equipo?.id,
+          plantilla: eventoEquipoEntity?.plantilla?.id,
+        };
+
+  return (
+    <div>
+      <Row className="justify-content-center">
+        <Col md="8">
+          <h2 id="appsupervisorApp.eventoEquipo.home.createOrEditLabel" data-cy="EventoEquipoCreateUpdateHeading">
+            <Translate contentKey="appsupervisorApp.eventoEquipo.home.createOrEditLabel">Create or edit a EventoEquipo</Translate>
+          </h2>
+        </Col>
+      </Row>
+      <Row className="justify-content-center">
+        <Col md="8">
+          {loading ? (
+            <p>Loading...</p>
+          ) : (
+            <ValidatedForm defaultValues={defaultValues()} onSubmit={saveEntity}>
+              {!isNew ? (
+                <ValidatedField
+                  name="id"
+                  required
+                  readOnly
+                  id="evento-equipo-id"
+                  label={translate('global.field.id')}
+                  validate={{ required: true }}
+                />
+              ) : null}
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.nombreVariable')}
+                id="evento-equipo-nombreVariable"
+                name="nombreVariable"
+                data-cy="nombreVariable"
+                type="text"
+                validate={{
+                  required: { value: true, message: translate('entity.validation.required') },
+                }}
+              />
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.direccionModbus')}
+                id="evento-equipo-direccionModbus"
+                name="direccionModbus"
+                data-cy="direccionModbus"
+                type="text"
+                validate={{
+                  required: { value: true, message: translate('entity.validation.required') },
+                  validate: v => isNumber(v) || translate('entity.validation.number'),
+                }}
+              />
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.tipoRegistro')}
+                id="evento-equipo-tipoRegistro"
+                name="tipoRegistro"
+                data-cy="tipoRegistro"
+                type="select"
+              >
+                {tipoRegistroValues.map(tipoRegistro => (
+                  <option value={tipoRegistro} key={tipoRegistro}>
+                    {translate(`appsupervisorApp.TipoRegistro.${tipoRegistro}`)}
+                  </option>
+                ))}
+              </ValidatedField>
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.tipoDato')}
+                id="evento-equipo-tipoDato"
+                name="tipoDato"
+                data-cy="tipoDato"
+                type="select"
+              >
+                {tipoDatoValues.map(tipoDato => (
+                  <option value={tipoDato} key={tipoDato}>
+                    {translate(`appsupervisorApp.TipoDato.${tipoDato}`)}
+                  </option>
+                ))}
+              </ValidatedField>
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.esEscribible')}
+                id="evento-equipo-esEscribible"
+                name="esEscribible"
+                data-cy="esEscribible"
+                check
+                type="checkbox"
+              />
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.valorNumerico')}
+                id="evento-equipo-valorNumerico"
+                name="valorNumerico"
+                data-cy="valorNumerico"
+                type="text"
+              />
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.valorBooleano')}
+                id="evento-equipo-valorBooleano"
+                name="valorBooleano"
+                data-cy="valorBooleano"
+                check
+                type="checkbox"
+              />
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.timestampActualizacion')}
+                id="evento-equipo-timestampActualizacion"
+                name="timestampActualizacion"
+                data-cy="timestampActualizacion"
+                type="datetime-local"
+                placeholder="YYYY-MM-DD HH:mm"
+              />
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.intervaloLectura')}
+                id="evento-equipo-intervaloLectura"
+                name="intervaloLectura"
+                data-cy="intervaloLectura"
+                type="text"
+              />
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.umbralAlerta')}
+                id="evento-equipo-umbralAlerta"
+                name="umbralAlerta"
+                data-cy="umbralAlerta"
+                type="text"
+              />
+              <ValidatedField
+                id="evento-equipo-equipo"
+                name="equipo"
+                data-cy="equipo"
+                label={translate('appsupervisorApp.eventoEquipo.equipo')}
+                type="select"
+              >
+                <option value="" key="0" />
+                {equipos
+                  ? equipos.map(otherEntity => (
+                      <option value={otherEntity.id} key={otherEntity.id}>
+                        {otherEntity.nombre}
+                      </option>
+                    ))
+                  : null}
+              </ValidatedField>
+              <ValidatedField
+                id="evento-equipo-plantilla"
+                name="plantilla"
+                data-cy="plantilla"
+                label={translate('appsupervisorApp.eventoEquipo.plantilla')}
+                type="select"
+              >
+                <option value="" key="0" />
+                {eventoPlantillas
+                  ? eventoPlantillas.map(otherEntity => (
+                      <option value={otherEntity.id} key={otherEntity.id}>
+                        {otherEntity.nombre}
+                      </option>
+                    ))
+                  : null}
+              </ValidatedField>
+              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/evento-equipo" replace color="info">
+                <FontAwesomeIcon icon="arrow-left" />
+                &nbsp;
+                <span className="d-none d-md-inline">
+                  <Translate contentKey="entity.action.back">Back</Translate>
+                </span>
+              </Button>
+              &nbsp;
+              <Button color="primary" id="save-entity" data-cy="entityCreateSaveButton" type="submit" disabled={updating}>
+                <FontAwesomeIcon icon="save" />
+                &nbsp;
+                <Translate contentKey="entity.action.save">Save</Translate>
+              </Button>
+            </ValidatedForm>
+          )}
+        </Col>
+      </Row>
+    </div>
+  );
+};
+
+export default EventoEquipoUpdate;

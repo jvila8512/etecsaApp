@@ -1,0 +1,49 @@
+{
+  "annotations": {
+    "changelogDate": "20260227164315"
+  },
+  "applications": ["appsupervisor"],
+  "documentation": "Catálogo de variables comunes para reutilizar.",
+  "dto": "mapstruct",
+  "fields": [
+    {
+      "fieldName": "nombre",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "unique"]
+    },
+    {
+      "fieldName": "descripcion",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "scalingFactor",
+      "fieldType": "Double"
+    },
+    {
+      "fieldName": "unidadMedida",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "funcionLectura",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "funcionEscritura",
+      "fieldType": "String"
+    }
+  ],
+  "jpaMetamodelFiltering": true,
+  "name": "EventoPlantilla",
+  "pagination": "pagination",
+  "relationships": [
+    {
+      "otherEntityField": "nombre",
+      "otherEntityName": "especialidad",
+      "relationshipName": "especialidad",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    }
+  ],
+  "searchEngine": "no",
+  "service": "serviceClass"
+}

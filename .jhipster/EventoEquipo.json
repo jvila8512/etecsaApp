@@ -1,0 +1,77 @@
+{
+  "annotations": {
+    "changelogDate": "20260227164314"
+  },
+  "applications": ["appsupervisor"],
+  "documentation": "Define el mapeo de memoria del PLC.\\nConfigurable por el usuario para M (bits), MW (words), etc.",
+  "dto": "mapstruct",
+  "fields": [
+    {
+      "fieldName": "nombreVariable",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "direccionModbus",
+      "fieldType": "Integer",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "tipoRegistro",
+      "fieldType": "TipoRegistro",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "BIT_LOGICO_M,PALABRA_MW,PALABRA_DOBLE_MD"
+    },
+    {
+      "fieldName": "tipoDato",
+      "fieldType": "TipoDato",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "BOOLEAN,INT16,UINT16,INT32,FLOAT32"
+    },
+    {
+      "fieldName": "esEscribible",
+      "fieldType": "Boolean"
+    },
+    {
+      "fieldName": "valorNumerico",
+      "fieldType": "Double"
+    },
+    {
+      "fieldName": "valorBooleano",
+      "fieldType": "Boolean"
+    },
+    {
+      "fieldName": "timestampActualizacion",
+      "fieldType": "ZonedDateTime"
+    },
+    {
+      "fieldName": "intervaloLectura",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "umbralAlerta",
+      "fieldType": "Double"
+    }
+  ],
+  "jpaMetamodelFiltering": true,
+  "name": "EventoEquipo",
+  "pagination": "pagination",
+  "relationships": [
+    {
+      "otherEntityField": "nombre",
+      "otherEntityName": "equipo",
+      "relationshipName": "equipo",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    },
+    {
+      "otherEntityField": "nombre",
+      "otherEntityName": "eventoPlantilla",
+      "relationshipName": "plantilla",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    }
+  ],
+  "searchEngine": "no",
+  "service": "serviceClass"
+}

@@ -1,0 +1,37 @@
+{
+  "annotations": {
+    "changelogDate": "20260227164313"
+  },
+  "applications": ["appsupervisor"],
+  "dto": "mapstruct",
+  "fields": [
+    {
+      "fieldName": "nombre",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "unique"]
+    },
+    {
+      "fieldName": "codigo",
+      "fieldType": "String",
+      "fieldValidateRules": ["required", "unique"]
+    },
+    {
+      "fieldName": "descripcionTecnica",
+      "fieldType": "String"
+    }
+  ],
+  "jpaMetamodelFiltering": true,
+  "name": "Especialidad",
+  "pagination": "pagination",
+  "relationships": [
+    {
+      "otherEntityName": "equipo",
+      "otherEntityRelationshipName": "especialidades",
+      "relationshipName": "equipos",
+      "relationshipSide": "right",
+      "relationshipType": "many-to-many"
+    }
+  ],
+  "searchEngine": "no",
+  "service": "serviceClass"
+}

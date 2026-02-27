@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { useAppSelector, useAppDispatch } from 'app/config/store';
 import { sendGeneradorCommandAction } from '../../websocket/generadores-websocket-middleware';
 import {
@@ -51,4 +50,3 @@ export const useGeneradores = () => {
     requestImmediateRead,
   };
 };
-/* eslint-enable prettier/prettier */

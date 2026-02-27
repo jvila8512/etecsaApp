@@ -1,0 +1,11 @@
+{
+  "appsupervisorApp": {
+    "EstadoEquipo": {
+      "null": "",
+      "OPERATIVO": "OPERATIVO",
+      "MANTENIMIENTO": "MANTENIMIENTO",
+      "DESCONECTADO": "DESCONECTADO",
+      "FALLA": "FALLA"
+    }
+  }
+}

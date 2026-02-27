@@ -92,7 +92,7 @@ management:
 
 spring:
   application:
-    name: controlsuper
+    name: appsupervisor
   docker:
     compose:
       enabled: false
@@ -152,13 +152,13 @@ spring:
           authorities-claim-name: auth
   task:
     execution:
-      thread-name-prefix: controlsuper-task-
+      thread-name-prefix: appsupervisor-task-
       pool:
         core-size: 2
         max-size: 50
         queue-capacity: 10000
     scheduling:
-      thread-name-prefix: controlsuper-scheduling-
+      thread-name-prefix: appsupervisor-scheduling-
       pool:
         size: 2
   thymeleaf:
@@ -189,7 +189,7 @@ info:
 
 jhipster:
   clientApp:
-    name: 'controlsuperApp'
+    name: 'appsupervisorApp'
   # By default CORS is disabled. Uncomment to enable.
   # cors:
   #   allowed-origins: "http://localhost:8100,http://localhost:9000"
@@ -199,12 +199,12 @@ jhipster:
   #   allow-credentials: true
   #   max-age: 1800
   mail:
-    from: controlsuper@localhost
+    from: appsupervisor@localhost
   api-docs:
     default-include-pattern: /api/**
     management-include-pattern: /management/**
-    title: Controlsuper API
-    description: Controlsuper API documentation
+    title: Appsupervisor API
+    description: Appsupervisor API documentation
     version: 0.0.1
     terms-of-service-url:
     contact-name:

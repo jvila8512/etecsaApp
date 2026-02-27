@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd
+                        http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+    <!--
+        Added the constraints for entity Equipo.
+    -->
+    <changeSet id="20260227164312-2" author="jhipster">
+
+        <addForeignKeyConstraint baseColumnNames="sitio_id"
+                                 baseTableName="equipo"
+                                 constraintName="fk_equipo__sitio_id"
+                                 referencedColumnNames="id"
+                                 referencedTableName="sitio"
+                                 />
+
+        <addForeignKeyConstraint baseColumnNames="equipo_id"
+                                 baseTableName="rel_equipo__especialidades"
+                                 constraintName="fk_rel_equipo__especialidades__equipo_id"
+                                 referencedColumnNames="id"
+                                 referencedTableName="equipo"
+                                 />
+
+        <addForeignKeyConstraint baseColumnNames="especialidades_id"
+                                 baseTableName="rel_equipo__especialidades"
+                                 constraintName="fk_rel_equipo__especialidades__especialidades_id"
+                                 referencedColumnNames="id"
+                                 referencedTableName="especialidad"
+                                 />
+    </changeSet>
+</databaseChangeLog>

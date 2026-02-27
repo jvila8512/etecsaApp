@@ -1,0 +1,9 @@
+export enum EstadoEquipo {
+  OPERATIVO = 'OPERATIVO',
+
+  MANTENIMIENTO = 'MANTENIMIENTO',
+
+  DESCONECTADO = 'DESCONECTADO',
+
+  FALLA = 'FALLA',
+}

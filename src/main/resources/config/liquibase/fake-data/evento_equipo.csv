@@ -1,0 +1,11 @@
+id;nombre_variable;direccion_modbus;tipo_registro;tipo_dato;es_escribible;valor_numerico;valor_booleano;timestamp_actualizacion;intervalo_lectura;umbral_alerta
+1;versus within times;25019;PALABRA_MW;UINT16;true;12263.63;true;2026-02-26T21:40:30;19949;5546.89
+2;quintessential cantaloupe;2273;PALABRA_MW;INT32;false;723.85;false;2026-02-27T05:10:57;14049;25024.72
+3;actually brr;28545;PALABRA_DOBLE_MD;INT32;false;3701.84;false;2026-02-27T08:33:27;797;334.04
+4;windy filthy ah;4522;PALABRA_DOBLE_MD;INT16;false;30.27;true;2026-02-26T22:04:26;974;25680.89
+5;annually before duh;10380;BIT_LOGICO_M;INT16;true;31649.02;false;2026-02-27T04:18:54;11096;601.49
+6;huff;26284;BIT_LOGICO_M;BOOLEAN;false;26711.09;false;2026-02-26T20:49:08;25969;14904.2
+7;inculcate weight;25469;PALABRA_DOBLE_MD;UINT16;false;8528.09;true;2026-02-27T05:46:37;26333;6161.67
+8;quixotic popularize;13601;BIT_LOGICO_M;BOOLEAN;true;4517.76;false;2026-02-26T17:24:14;9632;7714.01
+9;truly sew hmph;13759;BIT_LOGICO_M;UINT16;false;20969.94;false;2026-02-26T21:58:12;21160;2515.73
+10;since;15850;PALABRA_DOBLE_MD;FLOAT32;false;21316.02;true;2026-02-27T08:59:22;24891;4714.7

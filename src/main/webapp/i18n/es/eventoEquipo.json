@@ -1,0 +1,35 @@
+{
+  "appsupervisorApp": {
+    "eventoEquipo": {
+      "home": {
+        "title": "Evento Equipos",
+        "refreshListLabel": "Refrescar lista",
+        "createLabel": "Crear nuevo Evento Equipo",
+        "createOrEditLabel": "Crear o editar Evento Equipo",
+        "notFound": "Ningún Evento Equipos encontrado"
+      },
+      "created": "Un nuevo Evento Equipo ha sido creado con el identificador {{ param }}",
+      "updated": "Un Evento Equipo ha sido actualizado con el identificador {{ param }}",
+      "deleted": "Un Evento Equipo ha sido eliminado con el identificador {{ param }}",
+      "delete": {
+        "question": "¿Seguro que quiere eliminar Evento Equipo {{ id }}?"
+      },
+      "detail": {
+        "title": "Evento Equipo"
+      },
+      "id": "ID",
+      "nombreVariable": "Nombre Variable",
+      "direccionModbus": "Direccion Modbus",
+      "tipoRegistro": "Tipo Registro",
+      "tipoDato": "Tipo Dato",
+      "esEscribible": "Es Escribible",
+      "valorNumerico": "Valor Numerico",
+      "valorBooleano": "Valor Booleano",
+      "timestampActualizacion": "Timestamp Actualizacion",
+      "intervaloLectura": "Intervalo Lectura",
+      "umbralAlerta": "Umbral Alerta",
+      "equipo": "Equipo",
+      "plantilla": "Plantilla"
+    }
+  }
+}

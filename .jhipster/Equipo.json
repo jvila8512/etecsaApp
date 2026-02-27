@@ -1,0 +1,64 @@
+{
+  "annotations": {
+    "changelogDate": "20260227164312"
+  },
+  "applications": ["appsupervisor"],
+  "documentation": "Representa el PLC o dispositivo físico.\\nSe añade modbusSlaveId para comunicación RTU/TCP.",
+  "dto": "mapstruct",
+  "fields": [
+    {
+      "fieldName": "nombre",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "direccionIp",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "modbusSlaveId",
+      "fieldType": "Integer"
+    },
+    {
+      "fieldName": "modelo",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "firmwareVersion",
+      "fieldType": "String"
+    },
+    {
+      "fieldName": "estado",
+      "fieldType": "EstadoEquipo",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "OPERATIVO,MANTENIMIENTO,DESCONECTADO,FALLA"
+    },
+    {
+      "fieldName": "ultimoHeartbeat",
+      "fieldType": "ZonedDateTime"
+    }
+  ],
+  "jpaMetamodelFiltering": true,
+  "name": "Equipo",
+  "pagination": "pagination",
+  "relationships": [
+    {
+      "otherEntityField": "nombre",
+      "otherEntityName": "sitio",
+      "relationshipName": "sitio",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    },
+    {
+      "otherEntityField": "nombre",
+      "otherEntityName": "especialidad",
+      "otherEntityRelationshipName": "equipos",
+      "relationshipName": "especialidades",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-many"
+    }
+  ],
+  "searchEngine": "no",
+  "service": "serviceClass"
+}

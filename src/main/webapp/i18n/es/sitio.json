@@ -1,0 +1,27 @@
+{
+  "appsupervisorApp": {
+    "sitio": {
+      "home": {
+        "title": "Sitios",
+        "refreshListLabel": "Refrescar lista",
+        "createLabel": "Crear nuevo Sitio",
+        "createOrEditLabel": "Crear o editar Sitio",
+        "notFound": "Ningún Sitios encontrado"
+      },
+      "created": "Un nuevo Sitio ha sido creado con el identificador {{ param }}",
+      "updated": "Un Sitio ha sido actualizado con el identificador {{ param }}",
+      "deleted": "Un Sitio ha sido eliminado con el identificador {{ param }}",
+      "delete": {
+        "question": "¿Seguro que quiere eliminar Sitio {{ id }}?"
+      },
+      "detail": {
+        "title": "Sitio"
+      },
+      "id": "ID",
+      "nombre": "Nombre",
+      "codigo": "Codigo",
+      "ubicacion": "Ubicacion",
+      "fechaRegistro": "Fecha Registro"
+    }
+  }
+}

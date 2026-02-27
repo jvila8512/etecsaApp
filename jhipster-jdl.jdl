@@ -112,7 +112,7 @@ relationship ManyToOne {
   EventoEquipo{plantilla(nombre)} to EventoPlantilla
   EventoPlantilla{especialidad(nombre)} to Especialidad
   Alarma{evento(id)} to EventoEquipo
-  Alarma{acknowledgedBy(login)} to User
+  Alarma{acknowledgedBy(login)} to User with builtInEntity
 }
 
 relationship ManyToMany {

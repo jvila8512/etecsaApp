@@ -1,0 +1,62 @@
+{
+  "annotations": {
+    "changelogDate": "20260227164316"
+  },
+  "applications": ["appsupervisor"],
+  "documentation": "Registro de alertas y notificaciones.",
+  "dto": "mapstruct",
+  "fields": [
+    {
+      "fieldName": "descripcion",
+      "fieldType": "String",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "activatedAt",
+      "fieldType": "ZonedDateTime",
+      "fieldValidateRules": ["required"]
+    },
+    {
+      "fieldName": "deactivatedAt",
+      "fieldType": "ZonedDateTime"
+    },
+    {
+      "fieldName": "severidad",
+      "fieldType": "Severidad",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "BAJA,MEDIA,ALTA,CRITICA"
+    },
+    {
+      "fieldName": "estado",
+      "fieldType": "EstadoAlarma",
+      "fieldValidateRules": ["required"],
+      "fieldValues": "ACTIVA,RECONOCIDA,FINALIZADA"
+    },
+    {
+      "fieldName": "mensajeUsuario",
+      "fieldType": "String"
+    }
+  ],
+  "jpaMetamodelFiltering": true,
+  "name": "Alarma",
+  "pagination": "pagination",
+  "relationships": [
+    {
+      "otherEntityField": "id",
+      "otherEntityName": "eventoEquipo",
+      "relationshipName": "evento",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one"
+    },
+    {
+      "otherEntityField": "login",
+      "otherEntityName": "user",
+      "relationshipName": "acknowledgedBy",
+      "relationshipSide": "left",
+      "relationshipType": "many-to-one",
+      "relationshipWithBuiltInEntity": true
+    }
+  ],
+  "searchEngine": "no",
+  "service": "serviceClass"
+}
