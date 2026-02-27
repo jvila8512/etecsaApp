@@ -39,7 +39,17 @@ public class WebsocketConfiguration implements WebSocketMessageBrokerConfigurer 
             .map(origins -> origins.toArray(new String[0]))
             .orElse(new String[0]);
 
-        // Endpoint específico para generadores
+        // Endpoint específico para generadores web
+
+        // Endpoint específico para generadores desde flutter
+        // Endpoint para Flutter (WebSocket puro)
+        // registry
+        //   .addEndpoint("/websocket/generadores")
+        //   .setHandshakeHandler(defaultHandshakeHandler())
+        //  .setAllowedOriginPatterns("*")
+        //   .addInterceptors(httpSessionHandshakeInterceptor())
+        //   ;
+
         registry
             .addEndpoint("/websocket/generadores")
             .setHandshakeHandler(defaultHandshakeHandler())

@@ -1,0 +1,127 @@
+application {
+  config {
+    baseName appsupervisor
+    applicationType monolith
+    packageName com.etecsa
+    authenticationType jwt
+    prodDatabaseType mysql
+    devDatabaseType mysql
+    cacheProvider ehcache
+    enableHibernateCache true
+    clientFramework react
+    nativeLanguage es
+    languages [es, en]
+  }
+  entities *
+}
+
+// ===== ENTIDADES PRINCIPALES =====
+
+entity Sitio {
+  nombre String required unique
+  codigo String required unique
+  ubicacion String required
+  fechaRegistro ZonedDateTime
+}
+
+/** * Representa el PLC o dispositivo físico.
+ * Se añade modbusSlaveId para comunicación RTU/TCP.
+ */
+entity Equipo {
+
+  nombre String required
+  direccionIp String required
+  modbusSlaveId Integer // ID de unidad/esclavo (1-247)
+  modelo String
+  firmwareVersion String
+  estado EstadoEquipo required
+  ultimoHeartbeat ZonedDateTime
+}
+
+enum EstadoEquipo {
+  OPERATIVO, MANTENIMIENTO, DESCONECTADO, FALLA
+}
+
+entity Especialidad {
+  nombre String required unique
+  codigo String required unique
+  descripcionTecnica String
+}
+
+/** * Define el mapeo de memoria del PLC. 
+ * Configurable por el usuario para M (bits), MW (words), etc.
+ */
+entity EventoEquipo {
+  nombreVariable String required // Ej: "Estado Motor" o "Presion Tanque"
+  direccionModbus Integer required // Ej: 1 para M1 o 100 para MW100
+  tipoRegistro TipoRegistro required
+  tipoDato TipoDato required
+  esEscribible Boolean // Si el usuario puede enviar comandos desde la UI
+  valorNumerico Double
+  valorBooleano Boolean
+  timestampActualizacion ZonedDateTime
+  intervaloLectura Integer // en segundos
+  umbralAlerta Double // Para disparar alarmas
+}
+
+enum TipoRegistro {
+    BIT_LOGICO_M,        // Internamente será COIL / DISCRETE_INPUT
+    PALABRA_MW,          // Internamente será HOLDING_REGISTER (16 bits)
+    PALABRA_DOBLE_MD     // Internamente será HOLDING_REGISTER (32 bits)
+}
+
+enum TipoDato {
+  BOOLEAN, INT16, UINT16, INT32, FLOAT32
+}
+
+/** * Catálogo de variables comunes para reutilizar.
+ */
+entity EventoPlantilla {
+  nombre String required unique
+  descripcion String
+  scalingFactor Double
+  unidadMedida String
+  funcionLectura String
+  funcionEscritura String
+}
+
+/** * Registro de alertas y notificaciones.
+ */
+entity Alarma {
+  descripcion String required
+  activatedAt ZonedDateTime required
+  deactivatedAt ZonedDateTime
+  severidad Severidad required
+  estado EstadoAlarma required
+  mensajeUsuario String
+}
+
+enum Severidad {
+  BAJA, MEDIA, ALTA, CRITICA
+}
+
+enum EstadoAlarma {
+  ACTIVA, RECONOCIDA, FINALIZADA
+}
+
+// ===== RELACIONES =====
+
+relationship ManyToOne {
+  Equipo{sitio(nombre)} to Sitio
+  EventoEquipo{equipo(nombre)} to Equipo
+  EventoEquipo{plantilla(nombre)} to EventoPlantilla
+  EventoPlantilla{especialidad(nombre)} to Especialidad
+  Alarma{evento(id)} to EventoEquipo
+  Alarma{acknowledgedBy(login)} to User
+}
+
+relationship ManyToMany {
+  Equipo{especialidades(nombre)} to Especialidad{equipos}
+}
+
+// ===== CONFIGURACIÓN FINAL =====
+
+dto * with mapstruct
+service * with serviceClass
+paginate Sitio, Especialidad, Equipo, EventoPlantilla, EventoEquipo, Alarma with pagination
+filter *

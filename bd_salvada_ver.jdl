@@ -1,0 +1,120 @@
+
+application {
+  config {
+    baseName appsupervisor
+    applicationType monolith
+    packageName com.mycompany.myapp
+    prodDatabaseType mysql
+    cacheProvider ehcache
+    enableHibernateCache true
+    clientFramework react
+    authenticationType jwt
+  }
+
+  entities *
+  
+  pagination Sitio, Especialidad, Equipo, EventoPlantilla, EventoEquipo, Alarma with pagination
+  dto * with mapstruct
+  service * with serviceClass
+  filter *
+}// ===== ENTIDADES PRINCIPALES =====
+entity Sitio {
+  nombre String required unique
+  codigo String required unique        // Ej: "PLANTA-01"
+  ubicacion String required            // Dirección física
+  fechaRegistro Instant                // Fecha de alta del sitio
+}
+
+entity Especialidad {
+  nombre String required unique        // Ej: "Climatización", "Seguridad"
+  codigo String required unique        // Código técnico: "CLIM-001"
+  descripcionTecnica String            // Parámetros monitoreados
+}
+
+entity Equipo {
+  nombre String required
+  ip String required unique            // IP del PLC: "192.168.1.100"
+  modelo String required               // "Schneider M221"
+  firmwareVersion String               // Versión firmware: "V1.2.3"
+  estado EstadoEquipo required
+  ultimoHeartbeat Instant              // Última comunicación exitosa
+}
+
+entity EventoPlantilla {
+  nombre String required unique        // Ej: "TempAmbiente", "NivelAgua"
+  descripcion String required
+  tipoRegistro TipoRegistro required
+  dataType DataType required
+  byteOrder ByteOrder                  // Orden de bytes (default BIG_ENDIAN)
+  scalingFactor Float                  // Ej: 0.1 para decimales
+  unidadMedida String                  // "°C", "kPa", "%RH"
+  direccionModbusDefault Integer       // Dirección sugerida
+  funcionLectura ModbusFunctionCode required
+  funcionEscritura ModbusFunctionCode
+}
+
+entity EventoEquipo {
+  direccionModbus Integer required     // Dirección real en el PLC
+  valorNumerico Float                  // Para registros analógicos
+  valorBooleano Boolean                // Para coils/discrete inputs
+  timestampActualizacion Instant
+  intervaloLectura Integer             // Milisegundos entre lecturas
+  umbralAlerta Float                   // Valor para disparar alertas
+}
+
+entity Alarma {
+  descripcion String required          // Detalle del evento
+  activatedAt Instant
+  deactivatedAt Instant
+  severidad Severidad required
+  mensajeUsuario String                // Mensaje amigable: "Temperatura crítica en sector B"
+}
+
+// ===== RELACIONES =====
+relationship ManyToMany {
+  Equipo{especialidades} to Especialidad{equipos}  // M:N
+}
+
+relationship OneToMany {
+  Sitio{equipos} to Equipo{sitio}                // 1 Sitio → N Equipos
+  Especialidad{plantillas} to EventoPlantilla{especialidad} // 1 Esp → N Plantillas
+  Equipo{eventos} to EventoEquipo{equipo}        // 1 Equipo → N Eventos
+  EventoPlantilla{configuraciones} to EventoEquipo{plantilla} // 1 Plantilla → N Configs
+}
+
+relationship ManyToOne {
+  Alarma{evento} to EventoEquipo                 // 1 Alarma → 1 Evento
+  Alarma{acknowledgedBy} to User with builtInEntity // Usuario que reconoció
+}
+
+// ===== ENUMS TÉCNICOS =====
+enum TipoRegistro {
+  COIL,               // 0x - Marcas (Lectura/Escritura)
+  DISCRETE_INPUT,     // 1x - Entradas Digitales (Solo Lectura)
+  HOLDING_REGISTER,   // 4x - Registros (Lectura/Escritura)
+  INPUT_REGISTER      // 3x - Registros Entrada (Solo Lectura)
+}
+
+enum DataType {
+  UINT16, INT16, UINT32, INT32, FLOAT32, FLOAT64, BOOLEAN
+}
+
+enum ByteOrder {
+  BIG_ENDIAN, LITTLE_ENDIAN, BIG_ENDIAN_SWAP, LITTLE_ENDIAN_SWAP
+}
+
+enum ModbusFunctionCode {
+  READ_COILS, READ_DISCRETE_INPUTS, READ_HOLDING_REGISTERS, READ_INPUT_REGISTERS,
+  WRITE_SINGLE_COIL, WRITE_SINGLE_REGISTER, WRITE_MULTIPLE_COILS, WRITE_MULTIPLE_REGISTERS
+}
+
+enum EstadoEquipo {
+  OPERATIVO, EN_MANTENIMIENTO, DESCONECTADO, ALERTA
+}
+
+enum Severidad {
+  CRITICA, MEDIA, BAJA, INFORMATIVA
+}
+
+// ===== AUDITORÍA =====
+audit (Sitio, Especialidad, Equipo, EventoPlantilla, EventoEquipo, Alarma) with audit
