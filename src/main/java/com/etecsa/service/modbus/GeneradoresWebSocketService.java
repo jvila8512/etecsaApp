@@ -144,8 +144,9 @@ public class GeneradoresWebSocketService {
 
     /**
      * ENVÍO AUTOMÁTICO - Datos en tiempo real cada 2 segundos
+     *  @Scheduled(fixedRate = 2000)
      */
-    @Scheduled(fixedRate = 2000)
+
     public void enviarDatosTiempoReal() {
         try {
             int numeroEnvio = contadorEnvios.incrementAndGet();

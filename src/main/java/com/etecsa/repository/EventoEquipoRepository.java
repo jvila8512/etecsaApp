@@ -39,4 +39,13 @@ public interface EventoEquipoRepository extends JpaRepository<EventoEquipo, Long
         "select eventoEquipo from EventoEquipo eventoEquipo left join fetch eventoEquipo.equipo left join fetch eventoEquipo.plantilla where eventoEquipo.id =:id"
     )
     Optional<EventoEquipo> findOneWithToOneRelationships(@Param("id") Long id);
+
+    /**
+     * Obtiene los eventos de un equipo ordenados por fecha de actualización (más recientes primero).
+     * Usado por el DashboardWebSocketService para enviar el resumen de variables.
+     */
+    List<EventoEquipo> findByEquipoIdOrderByTimestampActualizacionDesc(Long equipoId);
+
+    @Query("SELECT ee FROM EventoEquipo ee JOIN FETCH ee.plantilla WHERE ee.equipo.id = :equipoId ORDER BY ee.timestampActualizacion DESC")
+    List<EventoEquipo> findByEquipoIdWithPlantilla(@Param("equipoId") Long equipoId);
 }

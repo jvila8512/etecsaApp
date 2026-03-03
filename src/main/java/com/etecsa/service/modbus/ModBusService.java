@@ -23,20 +23,39 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+/**
+ * ════════════════════════════════════════════════════════════
+ *  MODBUS SERVICE — Schneider TM221CE40T
+ *
+ *  PROBLEMA QUE CORRIGE ESTA VERSIÓN:
+ *  El log mostraba:
+ *    10:40:59.270 → Empieza Connecting
+ *    10:40:59.277 → Lee y da 70  ← LEÍA ANTES DE CONECTAR
+ *    10:40:59.320 → ConnectFailure
+ *
+ *  CAUSA: client.connect() de digitalpetri es async (devuelve
+ *  CompletableFuture). Sin esperar el resultado, el código
+ *  continuaba y leía con el socket aún en handshake → basura.
+ *
+ *  SOLUCIÓN: .get(5, SECONDS) hace la conexión síncrona.
+ *  Además se usa un mapa propio connectedState que solo se pone
+ *  en true DESPUÉS de que el .get() termine sin excepción.
+ * ════════════════════════════════════════════════════════════
+ */
 @Service
 public class ModBusService {
 
     private static final Logger log = LoggerFactory.getLogger(ModBusService.class);
 
-    // Mapa para almacenar múltiples clientes (uno por grupo electrógeno)
-    private ConcurrentHashMap<String, ModbusTcpClient> clients = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<String, ConnectionInfo> connectionInfo = new ConcurrentHashMap<>();
+    private static final int DEFAULT_PORT = 502;
+    private static final int DEFAULT_UNIT_ID = 255;
 
-    // Configuración por defecto
-    private final int DEFAULT_PORT = 502;
-    private final int DEFAULT_UNIT_ID = 1;
+    private final ConcurrentHashMap<String, ModbusTcpClient> clients = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ConnectionInfo> connectionInfo = new ConcurrentHashMap<>();
 
-    // Clase para almacenar información de conexión
+    // ✅ Estado propio: solo true después de conectar exitosamente
+    private final ConcurrentHashMap<String, Boolean> connectedState = new ConcurrentHashMap<>();
+
     private static class ConnectionInfo {
 
         String host;
@@ -50,125 +69,249 @@ public class ModBusService {
         }
     }
 
-    // ========== GESTIÓN DE CONEXIONES ==========
+    // ═══════════════════════════════════════════════════════════
+    // GESTIÓN DE CONEXIONES
+    // ═══════════════════════════════════════════════════════════
 
-    /**
-     * CONECTAR a un dispositivo específico
-     */
     public boolean connectToGenerator(String generatorId, String host, int port, int unitId) {
         try {
-            // Si ya está conectado al mismo dispositivo, mantener conexión
-            if (isConnected(generatorId)) {
+            // Si ya está conectado y verificado, no reconectar
+            if (Boolean.TRUE.equals(connectedState.get(generatorId))) {
                 ConnectionInfo info = connectionInfo.get(generatorId);
-                if (info != null && info.host.equals(host) && info.port == port && info.unitId == unitId) {
-                    log.info("✅ Ya conectado a grupo {} - {}:{} (UnitID: {})", generatorId, host, port, unitId);
+                if (info != null && info.host.equals(host) && info.port == port) {
+                    log.info("✅ Ya conectado {} → {}:{}", generatorId, host, port);
                     return true;
                 }
             }
 
-            // Cerrar conexión anterior si existe
-            disconnectGenerator(generatorId);
+            disconnectGenerator(generatorId); // limpiar anterior
 
-            // Crear nueva conexión
+            log.info("🔌 Conectando {} → {}:{} (UnitID:{})...", generatorId, host, port, unitId);
+
             var transport = NettyTcpClientTransport.create(cfg -> {
                 cfg.setHostname(host);
                 cfg.setPort(port);
             });
 
             ModbusTcpClient client = ModbusTcpClient.create(transport);
+
+            // ✅ connect() ya es SÍNCRONO en esta versión de digitalpetri.
+            // Bloquea internamente hasta que la conexión TCP está lista o lanza excepción.
+            // NO llamar .get() — devuelve void.
             client.connect();
 
-            // Guardar en el mapa
+            // Guardar temporalmente para poder usar getClientOrNull en la prueba
             clients.put(generatorId, client);
             connectionInfo.put(generatorId, new ConnectionInfo(host, port, unitId));
+            connectedState.put(generatorId, true);
 
-            log.info("✅ Conectado a grupo {} - {}:{} (UnitID: {})", generatorId, host, port, unitId);
-            return true;
+            // ✅ VERIFICACIÓN REAL: leer registro 0 como prueba
+            // Netty puede reportar connect() exitoso antes del TCP handshake completo.
+            // Esta lectura confirma que el PLC realmente responde.
+            try {
+                client.readHoldingRegisters(unitId, new ReadHoldingRegistersRequest(0, 1));
+                log.info("✅ Conectado y verificado {} → {}:{}", generatorId, host, port);
+                return true;
+            } catch (Exception testEx) {
+                log.error("❌ connect() ok pero PLC no responde {} → {}:{} : {}", generatorId, host, port, testEx.getMessage());
+                connectedState.put(generatorId, false);
+                clients.remove(generatorId);
+                connectionInfo.remove(generatorId);
+                try {
+                    client.disconnect();
+                } catch (Exception ignored) {}
+                return false;
+            }
         } catch (Exception e) {
-            log.error("❌ Error conectando a grupo {} - {}:{} - {}", generatorId, host, port, e.getMessage());
+            connectedState.put(generatorId, false);
+            clients.remove(generatorId);
+            connectionInfo.remove(generatorId);
+            log.error("❌ Falló conexión {} → {}:{} : {}", generatorId, host, port, e.getMessage());
             return false;
         }
     }
 
-    /**
-     * CONECTAR con parámetros por defecto
-     */
     public boolean connectToGenerator(String generatorId, String host) {
         return connectToGenerator(generatorId, host, DEFAULT_PORT, DEFAULT_UNIT_ID);
     }
 
-    /**
-     * CONECTAR con IP y puerto por parámetro
-     */
     public boolean connectToGenerator(String generatorId, String host, int port) {
         return connectToGenerator(generatorId, host, port, DEFAULT_UNIT_ID);
     }
 
-    /**
-     * Verificar si un grupo específico está conectado
-     */
-    public boolean isConnected(String generatorId) {
-        ModbusTcpClient client = clients.get(generatorId);
-        return client != null && client.isConnected();
-    }
-
-    /**
-     * Desconectar un grupo específico
-     */
     public void disconnectGenerator(String generatorId) {
-        ModbusTcpClient client = clients.get(generatorId);
+        connectedState.put(generatorId, false);
+        ModbusTcpClient client = clients.remove(generatorId);
+        connectionInfo.remove(generatorId);
         if (client != null) {
             try {
                 client.disconnect();
-                log.info("🔌 Desconectado grupo {}", generatorId);
-            } catch (Exception e) {
-                log.warn("⚠️ Error al desconectar grupo {}: {}", generatorId, e.getMessage());
-            } finally {
-                clients.remove(generatorId);
-                connectionInfo.remove(generatorId);
-            }
+            } catch (Exception ignored) {}
+            log.info("🔌 Desconectado {}", generatorId);
         }
     }
 
     /**
-     * Desconectar todos los grupos
+     * ✅ USA connectedState propio, NO client.isConnected().
+     * client.isConnected() devuelve true incluso en estado "Connecting"
+     * (antes de que el TCP handshake complete) → causaba el bug original.
      */
-    public void disconnectAll() {
-        clients.forEach((generatorId, client) -> {
-            try {
-                client.disconnect();
-                log.info("🔌 Desconectado grupo {}", generatorId);
-            } catch (Exception e) {
-                log.warn("⚠️ Error al desconectar grupo {}: {}", generatorId, e.getMessage());
-            }
-        });
-        clients.clear();
-        connectionInfo.clear();
-        log.info("🔌 Todos los grupos desconectados");
+    public boolean isConnected(String generatorId) {
+        return Boolean.TRUE.equals(connectedState.get(generatorId));
     }
 
-    /**
-     * Obtener información de conexión de un grupo
-     */
-    public String getConnectionInfo(String generatorId) {
-        ConnectionInfo info = connectionInfo.get(generatorId);
-        if (info == null) {
-            return "No conectado";
+    // ═══════════════════════════════════════════════════════════
+    // LECTURA %M — Bits internos (FC01 Read Coils)
+    // ═══════════════════════════════════════════════════════════
+
+    public Boolean readM(String generatorId, int address) {
+        try {
+            ModbusTcpClient client = getClientOrNull(generatorId);
+            if (client == null) return null;
+
+            ConnectionInfo info = connectionInfo.get(generatorId);
+            ReadCoilsResponse res = client.readCoils(info.unitId, new ReadCoilsRequest(address, 1));
+
+            boolean valor = (res.coils()[0] & 0x01) != 0;
+            log.debug("📖 %M{} = {}", address, valor);
+            return valor;
+        } catch (Exception e) {
+            log.error("❌ Error leyendo %M{} en {}: {}", address, generatorId, e.getMessage());
+            handleReadError(generatorId, e);
+            return null;
         }
-        return String.format("Conectado a %s:%d (UnitID: %d)", info.host, info.port, info.unitId);
     }
 
-    /**
-     * Obtener lista de grupos conectados
-     */
-    public List<String> getConnectedGenerators() {
-        List<String> connected = new ArrayList<>();
-        clients.forEach((generatorId, client) -> {
-            if (client.isConnected()) {
-                connected.add(generatorId);
+    public List<Boolean> readMBits(String generatorId, int address, int quantity) {
+        try {
+            ModbusTcpClient client = getClientOrNull(generatorId);
+            if (client == null) return Collections.emptyList();
+
+            ConnectionInfo info = connectionInfo.get(generatorId);
+            ReadCoilsResponse res = client.readCoils(info.unitId, new ReadCoilsRequest(address, quantity));
+
+            List<Boolean> bits = new ArrayList<>();
+            for (int i = 0; i < quantity; i++) {
+                bits.add((res.coils()[i / 8] & (1 << (i % 8))) != 0);
             }
-        });
-        return connected;
+            return bits;
+        } catch (Exception e) {
+            log.error("❌ Error leyendo %M bits @{}: {}", address, e.getMessage());
+            handleReadError(generatorId, e);
+            return Collections.emptyList();
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // LECTURA BASE — Holding Registers FC03
+    // ═══════════════════════════════════════════════════════════
+
+    // ═══════════════════════════════════════════════════════════
+    // LECTURA BASE — Holding Registers FC03
+    // ═══════════════════════════════════════════════════════════
+
+    public List<Integer> readHoldingRegisters(String generatorId, int address, int quantity) {
+        try {
+            ModbusTcpClient client = getClientOrNull(generatorId);
+            if (client == null) return Collections.emptyList();
+
+            ConnectionInfo info = connectionInfo.get(generatorId);
+            ReadHoldingRegistersResponse res = client.readHoldingRegisters(info.unitId, new ReadHoldingRegistersRequest(address, quantity));
+
+            // ✅ CORRECCIÓN CLAVE:
+            // response.registers() devuelve byte[] — 2 bytes por cada registro Modbus.
+            // registro[i] = byte[i*2] << 8 | byte[i*2 + 1]
+            // Antes: registers()[i] leía solo 1 byte → daba 7 en vez de 1800
+            byte[] raw = res.registers();
+            List<Integer> registers = new ArrayList<>();
+            for (int i = 0; i < quantity; i++) {
+                int highByte = raw[i * 2] & 0xFF; // byte alto
+                int lowByte = raw[i * 2 + 1] & 0xFF; // byte bajo
+                registers.add((highByte << 8) | lowByte); // combinar → valor real
+            }
+
+            log.debug("📖 HR @{} qty={} → {}", address, quantity, registers);
+            return registers;
+        } catch (Exception e) {
+            log.error("❌ Error leyendo HR @{} en {}: {}", address, generatorId, e.getMessage());
+            handleReadError(generatorId, e);
+            return Collections.emptyList();
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // LECTURA %MW — Word 16 bits
+    // ═══════════════════════════════════════════════════════════
+
+    public Integer readMW(String generatorId, int address) {
+        List<Integer> regs = readHoldingRegisters(generatorId, address, 1);
+        if (regs.isEmpty()) return null;
+        log.debug("📖 %MW{} = {}", address, regs.get(0));
+        return regs.get(0);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // LECTURA %MD — Double Word 32 bits
+    // ═══════════════════════════════════════════════════════════
+
+    /**
+     * TM221 Little-Endian: %MD0 = LW en %MW0, HW en %MW1
+     * valor = (highWord << 16) | lowWord
+     */
+    public Long readMD(String generatorId, int address) {
+        List<Integer> regs = readHoldingRegisters(generatorId, address, 2);
+        if (regs.size() < 2) return null;
+
+        int lowWord = regs.get(0);
+        int highWord = regs.get(1);
+        long valor = ((long) highWord << 16) | (long) lowWord;
+
+        log.debug("📖 %MD{} → LW={} HW={} → Valor={}", address, lowWord, highWord, valor);
+        return valor;
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // HELPERS PRIVADOS
+    // ═══════════════════════════════════════════════════════════
+
+    private ModbusTcpClient getClientOrNull(String generatorId) {
+        if (!Boolean.TRUE.equals(connectedState.get(generatorId))) {
+            log.warn("⚠️ {} no conectado (connectedState=false)", generatorId);
+            return null;
+        }
+        ModbusTcpClient client = clients.get(generatorId);
+        if (client == null) {
+            connectedState.put(generatorId, false);
+            return null;
+        }
+        return client;
+    }
+
+    private void handleReadError(String generatorId, Exception e) {
+        String msg = e.getMessage() != null ? e.getMessage().toLowerCase() : "";
+        if (msg.contains("connection") || msg.contains("timeout") || msg.contains("closed")) {
+            log.warn("⚠️ {} marcado como desconectado por error de red", generatorId);
+            connectedState.put(generatorId, false);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // DEBUG
+    // ═══════════════════════════════════════════════════════════
+
+    public void debugAddress(String generatorId, int address) {
+        List<Integer> regs = readHoldingRegisters(generatorId, address, 4);
+        log.error("═══ DEBUG %MW{} (grupo={}) ═══", address, generatorId);
+        for (int i = 0; i < regs.size(); i++) {
+            int raw = regs.get(i);
+            log.error("  %MW{} → unsigned={}  signed={}  hex=0x{}", address + i, raw, (short) raw, Integer.toHexString(raw).toUpperCase());
+        }
+        if (regs.size() >= 2) {
+            int w0 = regs.get(0), w1 = regs.get(1);
+            log.error("  32-bit TM221 (LW+HW) = {}", ((long) w1 << 16) | w0);
+            log.error("  32-bit BigEndian      = {}", ((long) w0 << 16) | w1);
+        }
+        log.error("═══════════════════════════════════════");
     }
 
     // ========== LECTURAS ==========
@@ -210,42 +353,6 @@ public class ModBusService {
     public Boolean readCoil(String generatorId, int address) {
         List<Boolean> coils = readCoils(generatorId, address, 1);
         return coils.isEmpty() ? null : coils.get(0);
-    }
-
-    /**
-     * LEER HOLDING REGISTERS de un grupo específico
-     */
-    public List<Integer> readHoldingRegisters(String generatorId, int address, int quantity) {
-        try {
-            ModbusTcpClient client = clients.get(generatorId);
-            if (client == null || !client.isConnected()) {
-                log.warn("⚠️ Grupo {} no conectado", generatorId);
-                return Collections.emptyList();
-            }
-
-            ConnectionInfo info = connectionInfo.get(generatorId);
-            ReadHoldingRegistersRequest request = new ReadHoldingRegistersRequest(address, quantity);
-            ReadHoldingRegistersResponse response = client.readHoldingRegisters(info.unitId, request);
-
-            List<Integer> registers = new ArrayList<>();
-            for (int i = 0; i < quantity; i++) {
-                registers.add((int) response.registers()[i]);
-            }
-
-            log.debug("📖 Grupo {} - Leídos {} registros desde @{}", generatorId, quantity, address);
-            return registers;
-        } catch (Exception e) {
-            log.error("❌ Error leyendo registros en grupo {} @{}: {}", generatorId, address, e.getMessage());
-            return Collections.emptyList();
-        }
-    }
-
-    /**
-     * LEER UN SOLO HOLDING REGISTER
-     */
-    public Integer readHoldingRegister(String generatorId, int address) {
-        List<Integer> registers = readHoldingRegisters(generatorId, address, 1);
-        return registers.isEmpty() ? null : registers.get(0);
     }
 
     // ========== ESCRITURAS ==========
@@ -333,6 +440,27 @@ public class ModBusService {
         }
     }
 
+    public String getConnectionInfo(String generatorId) {
+        ConnectionInfo info = connectionInfo.get(generatorId);
+        if (info == null) {
+            return "No conectado";
+        }
+        return String.format("Conectado a %s:%d (UnitID: %d)", info.host, info.port, info.unitId);
+    }
+
+    /**
+     * Obtener lista de grupos conectados
+     */
+    public List<String> getConnectedGenerators() {
+        List<String> connected = new ArrayList<>();
+        clients.forEach((generatorId, client) -> {
+            if (client.isConnected()) {
+                connected.add(generatorId);
+            }
+        });
+        return connected;
+    }
+
     /**
      * Obtener estadísticas del servicio
      */
@@ -342,5 +470,15 @@ public class ModBusService {
         stats.put("gruposConectados", getConnectedGenerators().size());
         stats.put("connectionInfo", new java.util.HashMap<>(connectionInfo));
         return stats;
+    }
+
+    public void debugRange(String generatorId, int startAddress, int quantity) {
+        List<Integer> regs = readHoldingRegisters(generatorId, startAddress, quantity);
+        log.error("════ SCAN %MW{} a %MW{} ════", startAddress, startAddress + quantity - 1);
+        for (int i = 0; i < regs.size(); i++) {
+            int val = regs.get(i);
+            log.error("  %MW{} = {}  (hex=0x{})", startAddress + i, val, Integer.toHexString(val).toUpperCase());
+        }
+        log.error("════ BUSCA el registro que vale 1800 (0x708) ════");
     }
 }

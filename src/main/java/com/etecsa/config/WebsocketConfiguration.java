@@ -57,6 +57,14 @@ public class WebsocketConfiguration implements WebSocketMessageBrokerConfigurer 
             .withSockJS()
             .setInterceptors(httpSessionHandshakeInterceptor());
 
+        // Endpoint para el dashboard en tiempo real (Home)
+        registry
+            .addEndpoint("/websocket/dashboard")
+            .setHandshakeHandler(defaultHandshakeHandler())
+            .setAllowedOrigins(allowedOrigins)
+            .withSockJS()
+            .setInterceptors(httpSessionHandshakeInterceptor());
+
         // Mantener el endpoint original de tracker
         registry
             .addEndpoint("/websocket/tracker")

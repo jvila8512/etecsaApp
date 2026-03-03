@@ -13,6 +13,7 @@ import applicationProfile from './application-profile';
 import authentication from './authentication';
 import locale from './locale';
 import generadores from './generadores-reducer';
+import dashboard from './dashboard-reducer';
 /* jhipster-needle-add-reducer-import - JHipster will add reducer here */
 
 const rootReducer: ReducersMapObject = {
@@ -28,6 +29,7 @@ const rootReducer: ReducersMapObject = {
   settings,
   loadingBar,
   generadores,
+  dashboard,
   /* jhipster-needle-add-reducer-combine - JHipster will add reducer here */
   ...entitiesReducers,
 };

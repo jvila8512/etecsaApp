@@ -7,7 +7,8 @@ import errorMiddleware from './error-middleware';
 import notificationMiddleware from './notification-middleware';
 import loggerMiddleware from './logger-middleware';
 import websocketMiddleware from './websocket-middleware';
-import generadoresWebsocketMiddleware from '../websocket/generadores-websocket-middleware'; //
+import generadoresWebsocketMiddleware from '../websocket/generadores-websocket-middleware';
+import dashboardWebsocketMiddleware from '../websocket/dashboard-websocket-middleware';
 
 const store = configureStore({
   reducer: sharedReducers,
@@ -22,8 +23,9 @@ const store = configureStore({
       notificationMiddleware,
       loadingBarMiddleware(),
       websocketMiddleware,
-      loggerMiddleware,
       generadoresWebsocketMiddleware,
+      dashboardWebsocketMiddleware,
+      loggerMiddleware,
     ),
 });
 

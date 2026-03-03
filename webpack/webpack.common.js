@@ -73,6 +73,14 @@ module.exports = async options => {
             include: [utils.root('./src/main/webapp/app')],
             exclude: [utils.root('node_modules')],
           },
+          // ← AGREGA AQUÍ
+          {
+            test: /\.(woff|woff2|ttf|eot)(\?v=\d+\.\d+\.\d+)?$/,
+            type: 'asset/resource',
+            generator: {
+              filename: 'fonts/[name][ext]',
+            },
+          },
           /*
        ,
        Disabled due to https://github.com/jhipster/generator-jhipster/issues/16116
@@ -123,6 +131,11 @@ module.exports = async options => {
             { from: './src/main/webapp/manifest.webapp', to: 'manifest.webapp' },
             // jhipster-needle-add-assets-to-webpack - JHipster will add/remove third-party resources in this array
             { from: './src/main/webapp/robots.txt', to: 'robots.txt' },
+            // ← AGREGA al final de patterns, antes del cierre ])
+            {
+              from: path.join(path.dirname(require.resolve('primeicons/package.json')), 'fonts'),
+              to: 'fonts/',
+            },
           ],
         }),
         new HtmlWebpackPlugin({

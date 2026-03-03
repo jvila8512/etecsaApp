@@ -19,6 +19,7 @@ import PageNotFound from 'app/shared/error/page-not-found';
 import { AUTHORITIES } from 'app/config/constants';
 import { sendActivity } from 'app/config/websocket-middleware';
 import GeneradoresDashboard from './modules/generadores/GeneradoresDashboard';
+import Dashboard from './modules/generadores';
 
 const loading = <div>loading ...</div>;
 
@@ -43,6 +44,7 @@ const AppRoutes = () => {
         <Route path="login" element={<Login />} />
         <Route path="logout" element={<Logout />} />
         <Route path="generadores" element={<GeneradoresDashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="account">
           <Route
             path="*"
