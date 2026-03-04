@@ -50,16 +50,25 @@ public class PollingService {
             List<EventoEquipo> eventos = eventoEquipoRepository.findByEquipoIdWithPlantilla(equipo.getId());
 
             for (EventoEquipo ev : eventos) {
-                // Solo variables de lectura
+                // Determinar si la variable es de lectura o tiene función de escritura
                 String funcEscritura = ev.getPlantilla().getFuncionEscritura();
-                if (funcEscritura != null && !funcEscritura.isEmpty()) continue;
+                boolean esLectura = funcEscritura == null || funcEscritura.isEmpty();
+                // consulta también el flag esEscribible en el propio evento
+                if (ev.getEsEscribible() != null && ev.getEsEscribible()) {
+                    esLectura = false;
+                }
 
                 EventoResumenDTO res = new EventoResumenDTO();
                 res.setNombreVariable(ev.getNombreVariable());
                 res.setUnidadMedida(ev.getPlantilla().getUnidadMedida());
-                res.setEsLectura(true);
+                res.setEsLectura(esLectura);
 
                 int dir = ev.getDireccionModbus();
+                res.setDir(dir);
+
+                // Si es variable de lectura, intentamos leerla del PLC como antes.
+                // Si es escribible (no esLectura) incluimos el registro en el DTO
+                // pero no forzamos una lectura activa (usamos el valor almacenado si existe).
 
                 // ══════════════════════════════════════════════════
                 // LEER SEGÚN tipoRegistro + tipoDato
@@ -67,30 +76,43 @@ public class PollingService {
                 switch (ev.getTipoRegistro()) {
                     // ── BIT_LOGICO_M → FC01 Read Coils ──────────
                     case BIT_LOGICO_M: {
-                        Boolean val = modBusService.readM(genId, dir);
-                        res.setValorBooleano(val);
-                        ev.setValorBooleano(val);
+                        if (esLectura) {
+                            Boolean val = modBusService.readM(genId, dir);
+                            res.setValorBooleano(val);
+                            ev.setValorBooleano(val);
+                        } else {
+                            // tomar último valor almacenado (puede ser null)
+                            res.setValorBooleano(ev.getValorBooleano());
+                        }
                         break;
                     }
                     // ── PALABRA_MW → FC03, 1 registro 16 bits ───
                     case PALABRA_MW: {
-                        Integer raw = modBusService.readMW(genId, dir);
-                        if (raw != null) {
-                            Double valor = interpretarMW(raw, ev.getTipoDato());
-                            Double escalado = escalar(valor, ev.getPlantilla().getScalingFactor());
-                            res.setValorNumerico(escalado);
-                            ev.setValorNumerico(escalado);
+                        if (esLectura) {
+                            Integer raw = modBusService.readMW(genId, dir);
+                            if (raw != null) {
+                                Double valor = interpretarMW(raw, ev.getTipoDato());
+                                Double escalado = escalar(valor, ev.getPlantilla().getScalingFactor());
+                                res.setValorNumerico(escalado);
+                                ev.setValorNumerico(escalado);
+                            }
+                        } else {
+                            res.setValorNumerico(ev.getValorNumerico());
                         }
                         break;
                     }
                     // ── PALABRA_DOBLE_MD → FC03, 2 registros 32 bits ─
                     case PALABRA_DOBLE_MD: {
-                        Long raw = modBusService.readMD(genId, dir);
-                        if (raw != null) {
-                            Double valor = interpretarMD(raw, ev.getTipoDato());
-                            Double escalado = escalar(valor, ev.getPlantilla().getScalingFactor());
-                            res.setValorNumerico(escalado);
-                            ev.setValorNumerico(escalado);
+                        if (esLectura) {
+                            Long raw = modBusService.readMD(genId, dir);
+                            if (raw != null) {
+                                Double valor = interpretarMD(raw, ev.getTipoDato());
+                                Double escalado = escalar(valor, ev.getPlantilla().getScalingFactor());
+                                res.setValorNumerico(escalado);
+                                ev.setValorNumerico(escalado);
+                            }
+                        } else {
+                            res.setValorNumerico(ev.getValorNumerico());
                         }
                         break;
                     }

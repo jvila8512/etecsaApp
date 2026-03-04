@@ -48,4 +48,10 @@ public interface EventoEquipoRepository extends JpaRepository<EventoEquipo, Long
 
     @Query("SELECT ee FROM EventoEquipo ee JOIN FETCH ee.plantilla WHERE ee.equipo.id = :equipoId ORDER BY ee.timestampActualizacion DESC")
     List<EventoEquipo> findByEquipoIdWithPlantilla(@Param("equipoId") Long equipoId);
+
+    /**
+     * Devuelve el evento correspondiente a un equipo y dirección Modbus concreta.
+     * Utilizado para actualizar el valor después de un comando de escritura.
+     */
+    EventoEquipo findByEquipoIdAndDireccionModbus(Long equipoId, Integer direccionModbus);
 }

@@ -13,6 +13,7 @@ public class EventoResumenDTO implements Serializable {
     private String nombreVariable;
     private Double valorNumerico; // Null si es booleano
     private Boolean valorBooleano; // Null si es numérico
+    private Integer dir; // dirección Modbus
     private String unidadMedida; // Para mostrar "50 Hz"
     private boolean esLectura; // Para diferenciar en el front
 
@@ -38,6 +39,14 @@ public class EventoResumenDTO implements Serializable {
 
     public void setValorBooleano(Boolean valorBooleano) {
         this.valorBooleano = valorBooleano;
+    }
+
+    public Integer getDir() {
+        return dir;
+    }
+
+    public void setDir(Integer dir) {
+        this.dir = dir;
     }
 
     public String getUnidadMedida() {

@@ -1,5 +1,6 @@
 package com.etecsa.web;
 
+import com.etecsa.domain.EventoEquipo;
 import com.etecsa.service.dto.ModbusCommandResponse;
 import com.etecsa.service.dto.ModbusWriteCommand;
 import com.etecsa.service.modbus.ModBusService;
@@ -18,10 +19,19 @@ public class ModbusWebSocketController {
 
     private final ModBusService modBusService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final com.etecsa.repository.EventoEquipoRepository eventoEquipoRepository;
+    private final com.etecsa.service.modbus.GeneradoresWebSocketService generadoresWebSocketService;
 
-    public ModbusWebSocketController(ModBusService modBusService, SimpMessagingTemplate messagingTemplate) {
+    public ModbusWebSocketController(
+        ModBusService modBusService,
+        SimpMessagingTemplate messagingTemplate,
+        com.etecsa.repository.EventoEquipoRepository eventoEquipoRepository,
+        com.etecsa.service.modbus.GeneradoresWebSocketService generadoresWebSocketService
+    ) {
         this.modBusService = modBusService;
         this.messagingTemplate = messagingTemplate;
+        this.eventoEquipoRepository = eventoEquipoRepository;
+        this.generadoresWebSocketService = generadoresWebSocketService;
     }
 
     /**
@@ -41,6 +51,30 @@ public class ModbusWebSocketController {
 
         try {
             boolean success = modBusService.writeCoil(command.getGeneratorId(), command.getAddress(), command.getBooleanValue());
+
+            // si la escritura fue exitosa, actualizamos también el valor en la tabla
+            if (success) {
+                try {
+                    EventoEquipo ev = eventoEquipoRepository.findByEquipoIdAndDireccionModbus(
+                        Long.parseLong(command.getGeneratorId()),
+                        command.getAddress()
+                    );
+                    if (ev != null) {
+                        ev.setValorBooleano(command.getBooleanValue());
+                        eventoEquipoRepository.save(ev);
+                    }
+                } catch (Exception x) {
+                    log.warn("⚠️ No pude actualizar evento_equipo tras writeCoil: {}", x.getMessage());
+                }
+                // enviar evento para que el front reciba confirmación
+                generadoresWebSocketService.enviarComandoEscritura(
+                    command.getGeneratorId(),
+                    "COIL",
+                    command.getAddress(),
+                    command.getBooleanValue(),
+                    true
+                );
+            }
 
             String message = success ? "✅ Coil escrito exitosamente" : "❌ Error escribiendo coil";
 
@@ -69,8 +103,31 @@ public class ModbusWebSocketController {
         try {
             boolean success = modBusService.writeRegister(command.getGeneratorId(), command.getAddress(), command.getValue());
 
-            String message = success ? "✅ Registro escrito exitosamente" : "❌ Error escribiendo registro";
-
+            // similar al coil, actualizar DB y emitir evento
+            if (success) {
+                try {
+                    EventoEquipo ev = eventoEquipoRepository.findByEquipoIdAndDireccionModbus(
+                        Long.parseLong(command.getGeneratorId()),
+                        command.getAddress()
+                    );
+                    if (ev != null) {
+                        // el tipo en la entidad es Double, convertir explícitamente
+                        ev.setValorNumerico(Double.valueOf(command.getValue()));
+                        eventoEquipoRepository.save(ev);
+                    }
+                } catch (Exception x) {
+                    log.warn("⚠️ No pude actualizar evento_equipo tras writeRegister: {}", x.getMessage());
+                }
+                generadoresWebSocketService.enviarComandoEscritura(
+                    command.getGeneratorId(),
+                    "REGISTER",
+                    command.getAddress(),
+                    command.getValue(),
+                    true
+                );
+            }
+            // devolver respuesta según resultado de éxito
+            String message = success ? "✅ Register escrito exitosamente" : "❌ Error escribiendo register";
             return new ModbusCommandResponse(command.getGeneratorId(), "REGISTER", command.getAddress(), success, message);
         } catch (Exception e) {
             log.error("❌ Error procesando writeRegister: {}", e.getMessage());

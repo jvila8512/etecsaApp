@@ -1,6 +1,6 @@
 // src/main/webapp/app/modules/dashboard/DashboardHome.tsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAppSelector, useAppDispatch } from 'app/config/store';
 import {
   getDashboardEquipos,
@@ -8,6 +8,7 @@ import {
   dashboardDataReceived,
   dashboardConnected,
   dashboardDisconnected,
+  getDashboardHasReceivedData,
 } from 'app/shared/reducers/dashboard-reducer';
 
 import { DataView, DataViewLayoutOptions } from 'primereact/dataview';
@@ -104,15 +105,14 @@ const gridItemTemplate = (equipo: EquipoDTO, onEntrar: (e: EquipoDTO) => void) =
         {/* Botón Entrar — solo si OPERATIVO */}
         <div style={styles.cardFooter}>
           <Button
-            label={activo ? 'Entrar' : equipo.estado}
             icon={activo ? 'pi pi-arrow-right' : 'pi pi-ban'}
-            iconPos="right"
+            rounded
+            text
             size="small"
             disabled={!activo}
             severity={activo ? undefined : 'secondary'}
-            outlined={!activo}
             onClick={() => activo && onEntrar(equipo)}
-            style={{ width: '100%', fontSize: '0.78rem', justifyContent: 'center' }}
+            style={{ width: '100%' }}
             tooltip={!activo ? `Equipo ${equipo.estado.toLowerCase()}` : 'Ver variables en tiempo real'}
             tooltipOptions={{ position: 'top' }}
           />
@@ -140,15 +140,15 @@ const listItemTemplate = (equipo: EquipoDTO, onEntrar: (e: EquipoDTO) => void) =
       <span style={styles.listIp}>{equipo.direccionIp}</span>
       <Tag value={equipo.estado} severity={getSeverity(equipo.estado)} style={{ fontSize: '0.7rem', fontWeight: 700 }} />
       <Button
-        label={activo ? 'Entrar' : equipo.estado}
         icon={activo ? 'pi pi-arrow-right' : 'pi pi-ban'}
-        iconPos="right"
+        rounded
+        text
         size="small"
         disabled={!activo}
         severity={activo ? undefined : 'secondary'}
-        outlined={!activo}
         onClick={() => activo && onEntrar(equipo)}
-        style={{ fontSize: '0.75rem', minWidth: 90 }}
+        tooltip={!activo ? `Equipo ${equipo.estado.toLowerCase()}` : 'Ver variables en tiempo real'}
+        tooltipOptions={{ position: 'top' }}
       />
     </div>
   );
@@ -161,32 +161,49 @@ const DashboardHome: React.FC<DashboardHomeProps> = ({ onEntrar }) => {
   const dispatch = useAppDispatch();
   const equipos = useAppSelector(getDashboardEquipos) as EquipoDTO[];
   const isConnected = useAppSelector(getDashboardConnected);
+  const hasReceivedData = useAppSelector(getDashboardHasReceivedData);
 
   const [layout, setLayout] = useState<'grid' | 'list'>('grid');
   const [globalFilter, setGlobalFilter] = useState('');
-  const [loading, setLoading] = useState(true);
+  const subscriberRef = useRef<any>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>();
+
+  // Determinar si mostrar skeleton: solo si NO tenemos datos y NO están cargados aún
+  const loading = !hasReceivedData && equipos.length === 0;
 
   // ── WebSocket ─────────────────────────────────────────────
   useEffect(() => {
     const onMessage = (message: any) => {
-      const payload = JSON.parse(message.body);
-      dispatch(dashboardDataReceived(payload));
-      setLoading(false);
+      try {
+        const payload = JSON.parse(message.body);
+        dispatch(dashboardDataReceived(payload));
+      } catch (error) {
+        console.error('❌ Error parsing WebSocket message:', error);
+      }
     };
 
-    if (window['stompClient']?.connected) {
+    // Solo suscribirse si WebSocket está conectado y no hay suscripción activa
+    if (window['stompClient']?.connected && !subscriberRef.current) {
       dispatch(dashboardConnected());
-      window['stompClient'].subscribe('/topic/dashboard', onMessage);
+      subscriberRef.current = window['stompClient'].subscribe('/topic/dashboard', onMessage);
     }
 
-    // Si no llegan datos en 8s, quitar skeleton igual
-    const timeout = setTimeout(() => setLoading(false), 8000);
+    // Timeout: Solo mostrar skeleton 3s si NO tenemos datos aún
+    if (!hasReceivedData && !timeoutRef.current) {
+      timeoutRef.current = setTimeout(() => {
+        // Los skeletons se ocultarán automáticamente cuando lleguen datos
+      }, 3000);
+    }
 
     return () => {
-      dispatch(dashboardDisconnected());
-      clearTimeout(timeout);
+      // Limpiar solo el timeout, NO la suscripción
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = undefined;
+      }
+      // NO desuscribirse al desmontar — mantener conexión
     };
-  }, [dispatch]);
+  }, [dispatch, hasReceivedData]);
 
   // ── Filtro local ──────────────────────────────────────────
   const equiposFiltrados = globalFilter

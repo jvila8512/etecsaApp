@@ -16,6 +16,7 @@ import {
   generadoresCommandSent,
   generadoresAlertReceived,
 } from '../shared/reducers/generadores-reducer';
+import { dashboardVariableWritten } from '../shared/reducers/dashboard-reducer';
 
 // ==================== TIPOS ====================
 interface SendGeneradorCommandAction extends AnyAction {
@@ -51,9 +52,20 @@ const generadoresWebsocketMiddleware: Middleware = store => next => (action: Any
         case 'TIEMPO_REAL':
           store.dispatch(generadoresDataReceived(message.payload));
           break;
-        case 'COMANDO_EJECUTADO':
+        case 'COMANDO_EJECUTADO': {
           store.dispatch(generadoresCommandSent(message.payload));
+          // actualización inmediata del dashboard para que el detalle muestre el valor nuevo
+          const { grupoId, tipo, direccion, valor, exito } = message.payload;
+          if (exito && (tipo === 'COIL' || tipo === 'REGISTRO')) {
+            const equipoId = parseInt(grupoId, 10);
+            const v = tipo === 'COIL' ? valor === true : (valor as number);
+            store.dispatch(
+              // acción importada en este módulo al comienzo
+              dashboardVariableWritten({ equipoId, dir: direccion, value: v }),
+            );
+          }
           break;
+        }
         case 'ALERTA_RECIBIDA':
           store.dispatch(generadoresAlertReceived(message.payload));
           break;

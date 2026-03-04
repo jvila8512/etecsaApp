@@ -2,6 +2,8 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from 'primereact/button';
+import { useAppDispatch } from 'app/config/store';
+import { dashboardVariableWritten } from 'app/shared/reducers/dashboard-reducer';
 import { Tag } from 'primereact/tag';
 import { Divider } from 'primereact/divider';
 import { InputNumber } from 'primereact/inputnumber';
@@ -19,12 +21,14 @@ import { Tooltip } from 'primereact/tooltip';
 import { useAppSelector } from 'app/config/store';
 import { getDashboardEquipos, getDashboardConnected } from 'app/shared/reducers/dashboard-reducer';
 import { EquipoDTO } from './types';
+import { useWriteVariable } from './hooks/useWriteVariable';
 
 // ══════════════════════════════════════════════════════════
 //  TIPOS WebSocket (estructura real que llega del backend)
 // ══════════════════════════════════════════════════════════
 interface WsVariable {
   nombreVariable: string;
+  dir: number; // ← añadido
   valorNumerico: number | null;
   valorBooleano: boolean | null;
   unidadMedida: string | null;
@@ -65,8 +69,9 @@ const calcPct = (val: number | null | undefined): number => {
 const BitCard: React.FC<{
   variable: WsVariable;
   escribible: boolean;
-  onToggle: (nombre: string, val: boolean) => void;
-}> = ({ variable, escribible, onToggle }) => {
+  isWriting?: boolean;
+  onToggle: (nombre: string, address: number, val: boolean) => void;
+}> = ({ variable, escribible, isWriting = false, onToggle }) => {
   const isOn = variable.valorBooleano === true;
   const cssKey = variable.nombreVariable.replace(/\s+/g, '-');
 
@@ -106,9 +111,9 @@ const BitCard: React.FC<{
         <div className={`toggle-ws-${cssKey}`}>
           <InputSwitch
             checked={isOn}
-            disabled={!escribible}
-            onChange={e => escribible && onToggle(variable.nombreVariable, e.value ?? false)}
-            style={{ opacity: escribible ? 1 : 0.5 }}
+            disabled={!escribible || isWriting}
+            onChange={e => escribible && onToggle(variable.nombreVariable, variable.dir, e.value ?? false)}
+            style={{ opacity: escribible && !isWriting ? 1 : 0.5 }}
           />
         </div>
       </div>
@@ -160,8 +165,9 @@ const RegCard: React.FC<{ variable: WsVariable }> = ({ variable }) => {
 // ══════════════════════════════════════════════════════════
 const WriteCard: React.FC<{
   variable: WsVariable;
-  onWrite: (nombre: string, valor: number) => void;
-}> = ({ variable, onWrite }) => {
+  onWrite: (nombre: string, address: number, valor: number) => void;
+  isLoading?: boolean;
+}> = ({ variable, onWrite, isLoading = false }) => {
   const [inputVal, setInputVal] = useState<number>(variable.valorNumerico ?? 0);
 
   return (
@@ -169,12 +175,14 @@ const WriteCard: React.FC<{
       style={{
         background: '#fff',
         border: '1px solid #bfdbfe',
-        borderLeft: '4px solid #3b82f6',
+        borderLeft: `4px solid ${isLoading ? '#f59e0b' : '#3b82f6'}`,
         borderRadius: 8,
         padding: '14px 16px',
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
+        opacity: isLoading ? 0.7 : 1,
+        transition: 'opacity 0.2s, border-color 0.2s',
       }}
     >
       <div>
@@ -186,12 +194,20 @@ const WriteCard: React.FC<{
       <div style={{ display: 'flex', gap: 8 }}>
         <InputNumber
           value={inputVal}
-          onValueChange={e => setInputVal(e.value ?? 0)}
+          onValueChange={e => !isLoading && setInputVal(e.value ?? 0)}
           style={{ flex: 1 }}
           inputStyle={{ fontFamily: 'monospace', fontSize: 13 }}
           placeholder="Valor..."
+          disabled={isLoading}
         />
-        <Button label="Enviar" icon="pi pi-send" size="small" onClick={() => onWrite(variable.nombreVariable, inputVal)} />
+        <Button
+          label={isLoading ? '' : 'Enviar'}
+          icon={isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-send'}
+          size="small"
+          disabled={isLoading}
+          loading={isLoading}
+          onClick={() => onWrite(variable.nombreVariable, variable.dir, inputVal)}
+        />
       </div>
     </div>
   );
@@ -209,10 +225,32 @@ const EquipoDetalle: React.FC<EquipoDetalleProps> = ({ equipo, onVolver }) => {
   const toast = useRef<Toast>(null);
 
   // ✅ LEER DESDE REDUX — el Home ya tiene la suscripción activa
-  // Cada vez que llega un mensaje WebSocket, Redux se actualiza
-  // y este componente re-renderiza automáticamente
   const todosLosEquipos = useAppSelector(getDashboardEquipos) as WsEquipo[];
   const isConnected = useAppSelector(getDashboardConnected);
+
+  // 📝 Hook para escribir en el PLC
+  const [writingAddress, setWritingAddress] = useState<number | null>(null);
+
+  const { writeBoolean, writeNumeric } = useWriteVariable(equipo.id, {
+    onSuccess(result) {
+      setWritingAddress(null);
+      toast.current?.show({
+        severity: 'success',
+        summary: 'Enviado al PLC',
+        detail: result.message,
+        life: 2500,
+      });
+    },
+    onError(error) {
+      setWritingAddress(null);
+      toast.current?.show({
+        severity: 'error',
+        summary: 'Error al escribir',
+        detail: error?.message || 'No se pudo enviar el comando',
+        life: 3000,
+      });
+    },
+  });
 
   // Filtrar solo el equipo que el usuario seleccionó
   const wsEquipo = todosLosEquipos?.find(e => e.id === equipo.id);
@@ -220,9 +258,14 @@ const EquipoDetalle: React.FC<EquipoDetalleProps> = ({ equipo, onVolver }) => {
   const estado = wsEquipo?.estado ?? equipo.estado;
 
   // Separar por tipo de variable
-  const bits = variables.filter(v => v.valorBooleano !== null);
-  const registros = variables.filter(v => v.valorNumerico !== null && v.valorBooleano === null);
-  const escritura = variables.filter(v => !v.esLectura);
+  // separar variables en tres grupos sin duplicar
+  // sólo las booleanas de sólo lectura van al panel de bits; las "escribibles"
+  // se muestran exclusivamente en la sección de escritura.
+  const bits = variables.filter(v => v.valorBooleano !== null && v.esLectura).sort((a, b) => a.dir - b.dir);
+  const registros = variables
+    .filter(v => v.valorNumerico !== null && v.valorBooleano === null && v.esLectura)
+    .sort((a, b) => a.dir - b.dir);
+  const escritura = variables.filter(v => !v.esLectura).sort((a, b) => a.dir - b.dir);
 
   // Timestamp de última actualización
   const [lastUpdate, setLastUpdate] = useState<string>('--:--:--');
@@ -233,30 +276,25 @@ const EquipoDetalle: React.FC<EquipoDetalleProps> = ({ equipo, onVolver }) => {
   }, [wsEquipo]);
 
   // ── Handlers ─────────────────────────────────────────
+  const dispatch = useAppDispatch();
+
   const handleToggleBit = useCallback(
-    (nombre: string, val: boolean) => {
-      // TODO: fetch(`/api/equipos/${equipo.id}/escribir-bit`, { method:'POST', body: JSON.stringify({nombre, valor: val}) })
-      toast.current?.show({
-        severity: 'success',
-        summary: 'Enviado',
-        detail: `${nombre} → ${val ? 'ON' : 'OFF'}`,
-        life: 2500,
-      });
+    (nombre: string, address: number, val: boolean) => {
+      // actualizar el store inmediatamente para que el interruptor cambie
+      dispatch(dashboardVariableWritten({ equipoId: equipo.id, dir: address, value: val }));
+      setWritingAddress(address);
+      writeBoolean(nombre, address, val);
     },
-    [equipo.id],
+    [writeBoolean, dispatch, equipo.id],
   );
 
   const handleWrite = useCallback(
-    (nombre: string, valor: number) => {
-      // TODO: fetch(`/api/equipos/${equipo.id}/escribir-registro`, { method:'POST', body: JSON.stringify({nombre, valor}) })
-      toast.current?.show({
-        severity: 'info',
-        summary: 'Valor enviado',
-        detail: `${nombre} ← ${valor}`,
-        life: 2500,
-      });
+    (nombre: string, address: number, valor: number) => {
+      dispatch(dashboardVariableWritten({ equipoId: equipo.id, dir: address, value: valor }));
+      setWritingAddress(address);
+      writeNumeric(nombre, address, valor);
     },
-    [equipo.id],
+    [writeNumeric, dispatch, equipo.id],
   );
 
   // ── Toolbar ───────────────────────────────────────────
@@ -349,8 +387,14 @@ const EquipoDetalle: React.FC<EquipoDetalleProps> = ({ equipo, onVolver }) => {
             style={{ border: '1px solid #e2e8f0', borderRadius: 8 }}
           >
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12 }}>
-              {bits.map((v, i) => (
-                <BitCard key={`bit-${i}-${v.nombreVariable}`} variable={v} escribible={!v.esLectura} onToggle={handleToggleBit} />
+              {bits.map(v => (
+                <BitCard
+                  key={`bit-${v.dir}`}
+                  variable={v}
+                  escribible={!v.esLectura}
+                  isWriting={writingAddress === v.dir}
+                  onToggle={(name, _address, val) => handleToggleBit(name, v.dir, val)}
+                />
               ))}
             </div>
           </Panel>
@@ -364,8 +408,8 @@ const EquipoDetalle: React.FC<EquipoDetalleProps> = ({ equipo, onVolver }) => {
             style={{ border: '1px solid #e2e8f0', borderRadius: 8 }}
           >
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12 }}>
-              {registros.map((v, i) => (
-                <RegCard key={`reg-${i}-${v.nombreVariable}`} variable={v} />
+              {registros.map(v => (
+                <RegCard key={`reg-${v.dir}`} variable={v} />
               ))}
             </div>
           </Panel>
@@ -379,11 +423,22 @@ const EquipoDetalle: React.FC<EquipoDetalleProps> = ({ equipo, onVolver }) => {
             style={{ border: '1px solid #e2e8f0', borderRadius: 8 }}
           >
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-              {escritura.map((v, i) =>
+              {escritura.map(v =>
                 v.valorBooleano !== null ? (
-                  <BitCard key={`wr-bit-${i}`} variable={v} escribible={true} onToggle={handleToggleBit} />
+                  <BitCard
+                    key={`wr-bit-${v.dir}`}
+                    variable={v}
+                    escribible={true}
+                    isWriting={writingAddress === v.dir}
+                    onToggle={(name, _address, val) => handleToggleBit(name, v.dir, val)}
+                  />
                 ) : (
-                  <WriteCard key={`wr-num-${i}`} variable={v} onWrite={handleWrite} />
+                  <WriteCard
+                    key={`wr-num-${v.dir}`}
+                    variable={v}
+                    isLoading={writingAddress === v.dir}
+                    onWrite={(name, _address, val) => handleWrite(name, v.dir, val)}
+                  />
                 ),
               )}
             </div>

@@ -80,15 +80,18 @@ export const sendGeneradorCommand = (commandType: string, payload: any): void =>
 
     switch (commandType) {
       case 'CONECTAR_GRUPO':
-        generadoresStompClient.send('/app/generadores/conectar', JSON.stringify(payload), {});
+        // backend recibe en /app/generadores/connect (ModbusWebSocketController)
+        generadoresStompClient.send('/app/generadores/connect', JSON.stringify(payload), {});
         break;
 
       case 'ESCRIBIR_COIL':
-        generadoresStompClient.send('/app/generadores/escribir-coil', JSON.stringify(payload), {});
+        // backend espera /app/generadores/writeCoil
+        generadoresStompClient.send('/app/generadores/writeCoil', JSON.stringify(payload), {});
         break;
 
       case 'ESCRIBIR_REGISTRO':
-        generadoresStompClient.send('/app/generadores/escribir-registro', JSON.stringify(payload), {});
+        // backend espera /app/generadores/writeRegister
+        generadoresStompClient.send('/app/generadores/writeRegister', JSON.stringify(payload), {});
         break;
 
       case 'LECTURA_INMEDIATA':
