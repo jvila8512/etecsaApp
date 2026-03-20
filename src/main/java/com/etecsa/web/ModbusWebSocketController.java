@@ -120,18 +120,18 @@ public class ModbusWebSocketController {
                 }
                 generadoresWebSocketService.enviarComandoEscritura(
                     command.getGeneratorId(),
-                    "REGISTER",
+                    "REGISTRO",
                     command.getAddress(),
                     command.getValue(),
                     true
                 );
             }
             // devolver respuesta según resultado de éxito
-            String message = success ? "✅ Register escrito exitosamente" : "❌ Error escribiendo register";
-            return new ModbusCommandResponse(command.getGeneratorId(), "REGISTER", command.getAddress(), success, message);
+            String message = success ? "✅ Registro escrito exitosamente" : "❌ Error escribiendo registro";
+            return new ModbusCommandResponse(command.getGeneratorId(), "REGISTRO", command.getAddress(), success, message);
         } catch (Exception e) {
             log.error("❌ Error procesando writeRegister: {}", e.getMessage());
-            return new ModbusCommandResponse(command.getGeneratorId(), "REGISTER", command.getAddress(), false, "Error: " + e.getMessage());
+            return new ModbusCommandResponse(command.getGeneratorId(), "REGISTRO", command.getAddress(), false, "Error: " + e.getMessage());
         }
     }
 

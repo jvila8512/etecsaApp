@@ -55,7 +55,12 @@ const estadoSeverity = (estado: string) => {
 
 const fmtNumerico = (v: number | null | undefined): string => {
   if (v === null || v === undefined) return '---';
-  return v.toLocaleString('es-ES');
+
+  // Usamos Math.round para eliminar cualquier decimal .000 antes de formatear
+  const valorLimpio = Math.round(v);
+
+  // Al ser un entero, toLocaleString solo pondrá puntos de miles si es necesario
+  return valorLimpio.toLocaleString('es-ES');
 };
 
 const calcPct = (val: number | null | undefined): number => {
@@ -99,7 +104,7 @@ const BitCard: React.FC<{
         </div>
         <Tag
           value={isOn ? 'ON' : 'OFF'}
-          severity={isOn ? 'success' : 'secondary'}
+          severity={isOn ? 'success' : 'danger'}
           icon={isOn ? 'pi pi-check-circle' : 'pi pi-circle'}
           style={{ fontSize: 11 }}
         />
@@ -126,8 +131,13 @@ const BitCard: React.FC<{
 // ══════════════════════════════════════════════════════════
 const RegCard: React.FC<{ variable: WsVariable }> = ({ variable }) => {
   const val = variable.valorNumerico;
-  const pct = Math.round(calcPct(val));
-  const showKnob = val !== null && val !== undefined && val >= 0 && val <= 100 && variable.unidadMedida === '%';
+
+  // Calculamos el porcentaje real para la barra y el Knob
+  const pct = calcPct(val);
+  const pctRedondeado = Math.round(pct);
+
+  // El Knob se muestra si es una unidad de porcentaje, usando el valor ya escalado
+  const showKnob = val !== null && val !== undefined && variable.unidadMedida === '%';
 
   return (
     <div
@@ -147,15 +157,20 @@ const RegCard: React.FC<{ variable: WsVariable }> = ({ variable }) => {
           <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>{variable.nombreVariable}</div>
           <div style={{ fontSize: 10, color: '#94a3b8', fontFamily: 'monospace', marginTop: 2 }}>NUMÉRICO</div>
         </div>
-        {showKnob && <Knob value={val ?? 0} size={48} readOnly valueColor="#3b82f6" rangeColor="#e2e8f0" textColor="#1e293b" />}
+        {/* Usamos pctRedondeado para que el Knob siempre esté en el rango 0-100 */}
+        {showKnob && <Knob value={pctRedondeado} size={48} readOnly valueColor="#3b82f6" rangeColor="#e2e8f0" textColor="#1e293b" />}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span style={{ fontSize: 28, fontWeight: 700, color: '#1e293b', fontFamily: 'monospace', lineHeight: 1 }}>{fmtNumerico(val)}</span>
+        <span style={{ fontSize: 18, fontWeight: 700, color: '#1e293b', fontFamily: 'monospace', lineHeight: 1 }}>
+          {/* Aquí aplicamos el formateo sin ceros sobrantes */}
+          {fmtNumerico(val)}
+        </span>
         {variable.unidadMedida && <span style={{ fontSize: 13, color: '#94a3b8' }}>{variable.unidadMedida}</span>}
       </div>
 
-      <ProgressBar value={pct} showValue={false} style={{ height: 4, borderRadius: 4 }} color="#3b82f6" />
+      {/* La barra de progreso también usa el porcentaje calculado */}
+      <ProgressBar value={pctRedondeado} showValue={false} style={{ height: 4, borderRadius: 4 }} color="#3b82f6" />
     </div>
   );
 };
@@ -201,7 +216,6 @@ const WriteCard: React.FC<{
           disabled={isLoading}
         />
         <Button
-          label={isLoading ? '' : 'Enviar'}
           icon={isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-send'}
           size="small"
           disabled={isLoading}
@@ -389,7 +403,7 @@ const EquipoDetalle: React.FC<EquipoDetalleProps> = ({ equipo, onVolver }) => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12 }}>
               {bits.map(v => (
                 <BitCard
-                  key={`bit-${v.dir}`}
+                  key={`bit-${v.dir}-${v.nombreVariable}`}
                   variable={v}
                   escribible={!v.esLectura}
                   isWriting={writingAddress === v.dir}
@@ -409,7 +423,7 @@ const EquipoDetalle: React.FC<EquipoDetalleProps> = ({ equipo, onVolver }) => {
           >
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 12 }}>
               {registros.map(v => (
-                <RegCard key={`reg-${v.dir}`} variable={v} />
+                <RegCard key={`reg-${v.dir}-${v.nombreVariable}`} variable={v} />
               ))}
             </div>
           </Panel>
@@ -426,7 +440,7 @@ const EquipoDetalle: React.FC<EquipoDetalleProps> = ({ equipo, onVolver }) => {
               {escritura.map(v =>
                 v.valorBooleano !== null ? (
                   <BitCard
-                    key={`wr-bit-${v.dir}`}
+                    key={`wr-bit-${v.dir}-${v.nombreVariable}`}
                     variable={v}
                     escribible={true}
                     isWriting={writingAddress === v.dir}
@@ -434,7 +448,7 @@ const EquipoDetalle: React.FC<EquipoDetalleProps> = ({ equipo, onVolver }) => {
                   />
                 ) : (
                   <WriteCard
-                    key={`wr-num-${v.dir}`}
+                    key={`wr-num-${v.dir}-${v.nombreVariable}`}
                     variable={v}
                     isLoading={writingAddress === v.dir}
                     onWrite={(name, _address, val) => handleWrite(name, v.dir, val)}

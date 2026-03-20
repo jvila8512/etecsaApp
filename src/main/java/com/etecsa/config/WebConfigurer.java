@@ -59,7 +59,16 @@ public class WebConfigurer implements ServletContextInitializer, WebServerFactor
         if (server instanceof ConfigurableServletWebServerFactory servletWebServer) {
             File root;
             String prefixPath = resolvePathPrefix();
-            root = Path.of(prefixPath + "target/classes/static/").toFile();
+            // ignore invalid prefixes coming from a jar (e.g. "nested:")
+            if (prefixPath.contains("nested:") || prefixPath.contains("jar:")) {
+                prefixPath = "";
+            }
+            try {
+                root = Path.of(prefixPath + "target/classes/static/").toFile();
+            } catch (Exception ex) {
+                LOG.warn("Omitting static asset document root, invalid path prefix {}: {}", prefixPath, ex.getMessage());
+                return;
+            }
             if (root.exists() && root.isDirectory()) {
                 servletWebServer.setDocumentRoot(root);
             }

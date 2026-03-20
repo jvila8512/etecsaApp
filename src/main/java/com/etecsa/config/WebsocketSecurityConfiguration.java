@@ -12,20 +12,25 @@ public class WebsocketSecurityConfiguration extends AbstractSecurityWebSocketMes
     @Override
     protected void configureInbound(MessageSecurityMetadataSourceRegistry messages) {
         messages
+            // Mensajes sin destino (por ejemplo, handshakes internos)
             .nullDestMatcher()
             .authenticated()
+            // Solo administradores pueden suscribirse a /topic/tracker
             .simpDestMatchers("/topic/tracker")
             .hasAuthority(AuthoritiesConstants.ADMIN)
-            // matches any destination that starts with /topic/
-            // (i.e. cannot send messages directly to /topic/)
-            // (i.e. cannot subscribe to /topic/messages/* to get messages sent to
-            // /topic/messages-user<id>)
+            // Cualquier suscripción a /topic/** (incluye /topic/generadores/** y /topic/dashboard)
+            // requiere un usuario autenticado (ROLE_USER o superior)
             .simpDestMatchers("/topic/**")
             .authenticated()
-            // message types other than MESSAGE and SUBSCRIBE
+            // Permitir el envío de comandos a los endpoints de aplicación
+            // /app/generadores/** se usa para escribir en el PLC y conectar equipos
+            .simpDestMatchers("/app/generadores/**")
+            .authenticated()
+            // A partir de aquí, cualquier otro MESSAGE/SUBSCRIBE que no coincida
+            // con las reglas anteriores será denegado.
             .simpTypeMatchers(SimpMessageType.MESSAGE, SimpMessageType.SUBSCRIBE)
             .denyAll()
-            // catch all
+            // catch all final
             .anyMessage()
             .denyAll();
     }

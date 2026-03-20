@@ -29,7 +29,14 @@ public class WebsocketConfiguration implements WebSocketMessageBrokerConfigurer 
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        // ✅ CORREGIDO: Un solo enableSimpleBroker con TODOS los prefijos
+        // Prefijo de destinos de aplicación: todo lo que empiece por /app
+        // se enruta a métodos @MessageMapping en el backend.
+        config.setApplicationDestinationPrefixes("/app");
+
+        // Broker simple para los tópicos que el cliente puede suscribirse directamente.
+        // /topic/** incluye:
+        //  - /topic/generadores/**
+        //  - /topic/dashboard
         config.enableSimpleBroker("/topic", "/topic/generadores");
     }
 

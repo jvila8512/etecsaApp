@@ -84,6 +84,7 @@
     "dayjs": "1.11.13",
     "lodash": "4.17.21",
     "path-browserify": "1.0.1",
+    "primeflex": "3.3.1",
     "primeicons": "^7.0.0",
     "primereact": "^10.9.7",
     "react": "18.3.1",

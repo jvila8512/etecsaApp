@@ -85,13 +85,31 @@ export const sendGeneradorCommand = (commandType: string, payload: any): void =>
         break;
 
       case 'ESCRIBIR_COIL':
-        // backend espera /app/generadores/writeCoil
-        generadoresStompClient.send('/app/generadores/writeCoil', JSON.stringify(payload), {});
+        // backend espera /app/generadores/writeCoil con campos { generatorId, address, booleanValue }
+        // Normalizamos los nombres que vienen del frontend: { grupoId, direccion, valor }
+        generadoresStompClient.send(
+          '/app/generadores/writeCoil',
+          JSON.stringify({
+            generatorId: payload.grupoId || payload.generatorId,
+            address: payload.direccion || payload.address,
+            booleanValue: payload.valor || payload.booleanValue,
+          }),
+          {},
+        );
         break;
 
       case 'ESCRIBIR_REGISTRO':
-        // backend espera /app/generadores/writeRegister
-        generadoresStompClient.send('/app/generadores/writeRegister', JSON.stringify(payload), {});
+        // backend espera /app/generadores/writeRegister con campos { generatorId, address, value }
+        // Normalizamos los nombres que vienen del frontend: { grupoId, direccion, valor }
+        generadoresStompClient.send(
+          '/app/generadores/writeRegister',
+          JSON.stringify({
+            generatorId: payload.grupoId || payload.generatorId,
+            address: payload.direccion || payload.address,
+            value: payload.valor || payload.value,
+          }),
+          {},
+        );
         break;
 
       case 'LECTURA_INMEDIATA':

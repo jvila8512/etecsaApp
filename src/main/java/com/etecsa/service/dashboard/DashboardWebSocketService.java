@@ -38,7 +38,7 @@ public class DashboardWebSocketService {
         this.pollingService = pollingService;
     }
 
-    @Scheduled(fixedRate = 1000) // Se ejecuta cada 5 segundos
+    @Scheduled(fixedRate = 10000) // Se ejecuta cada 5 segundos
     public void ejecutarCicloDeLectura() {
         try {
             // Pega esto en cualquier lugar que se ejecute una vez, por ejemplo en el conectar

@@ -66,9 +66,13 @@ public class PollingService {
                 int dir = ev.getDireccionModbus();
                 res.setDir(dir);
 
-                // Si es variable de lectura, intentamos leerla del PLC como antes.
-                // Si es escribible (no esLectura) incluimos el registro en el DTO
-                // pero no forzamos una lectura activa (usamos el valor almacenado si existe).
+                // Inicializar ambos valores como null para evitar basura
+                res.setValorBooleano(null);
+                res.setValorNumerico(null);
+
+                // Si es variable de lectura, intentamos leerla del PLC.
+                // Si es escribible, también intentamos leerla si es posible,
+                // pero usamos el valor almacenado si la lectura falla.
 
                 // ══════════════════════════════════════════════════
                 // LEER SEGÚN tipoRegistro + tipoDato
@@ -76,24 +80,26 @@ public class PollingService {
                 switch (ev.getTipoRegistro()) {
                     // ── BIT_LOGICO_M → FC01 Read Coils ──────────
                     case BIT_LOGICO_M: {
-                        if (esLectura) {
-                            Boolean val = modBusService.readM(genId, dir);
+                        Boolean val = modBusService.readM(genId, dir);
+                        if (val != null) {
                             res.setValorBooleano(val);
-                            ev.setValorBooleano(val);
+                            if (esLectura) {
+                                ev.setValorBooleano(val);
+                            }
                         } else {
-                            // tomar último valor almacenado (puede ser null)
+                            // si la lectura falla, usar valor almacenado
                             res.setValorBooleano(ev.getValorBooleano());
                         }
                         break;
                     }
                     // ── PALABRA_MW → FC03, 1 registro 16 bits ───
                     case PALABRA_MW: {
-                        if (esLectura) {
-                            Integer raw = modBusService.readMW(genId, dir);
-                            if (raw != null) {
-                                Double valor = interpretarMW(raw, ev.getTipoDato());
-                                Double escalado = escalar(valor, ev.getPlantilla().getScalingFactor());
-                                res.setValorNumerico(escalado);
+                        Integer raw = modBusService.readMW(genId, dir);
+                        if (raw != null) {
+                            Double valor = interpretarMW(raw, ev.getTipoDato());
+                            Double escalado = escalar(valor, ev.getPlantilla().getScalingFactor());
+                            res.setValorNumerico(escalado);
+                            if (esLectura) {
                                 ev.setValorNumerico(escalado);
                             }
                         } else {
@@ -103,12 +109,12 @@ public class PollingService {
                     }
                     // ── PALABRA_DOBLE_MD → FC03, 2 registros 32 bits ─
                     case PALABRA_DOBLE_MD: {
-                        if (esLectura) {
-                            Long raw = modBusService.readMD(genId, dir);
-                            if (raw != null) {
-                                Double valor = interpretarMD(raw, ev.getTipoDato());
-                                Double escalado = escalar(valor, ev.getPlantilla().getScalingFactor());
-                                res.setValorNumerico(escalado);
+                        Long raw = modBusService.readMD(genId, dir);
+                        if (raw != null) {
+                            Double valor = interpretarMD(raw, ev.getTipoDato());
+                            Double escalado = escalar(valor, ev.getPlantilla().getScalingFactor());
+                            res.setValorNumerico(escalado);
+                            if (esLectura) {
                                 ev.setValorNumerico(escalado);
                             }
                         } else {

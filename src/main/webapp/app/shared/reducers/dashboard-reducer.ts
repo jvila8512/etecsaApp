@@ -20,6 +20,8 @@ export interface DashboardState {
   equipos: DashboardEquipo[];
   lastUpdate: number | null;
   hasReceivedData: boolean;
+  // mapa de escrituras pendientes para evitar sobrescrituras por lecturas posteriores
+  pendingWrites?: { [key: string]: number };
 }
 
 const initialState: DashboardState = {
@@ -27,6 +29,7 @@ const initialState: DashboardState = {
   equipos: [],
   lastUpdate: null,
   hasReceivedData: false,
+  pendingWrites: {},
 };
 
 export const DashboardSlice = createSlice({
@@ -65,6 +68,17 @@ export const DashboardSlice = createSlice({
       const oldMap = new Map<number, string>();
       state.equipos.forEach(e => oldMap.set(e.id, e.estado));
 
+      // crear mapa de variables previas (equipoId -> "dir-Tipo" -> variable)
+      const prevVarMap = new Map<number, Map<string, any>>();
+      state.equipos.forEach(e => {
+        const m = new Map<string, any>();
+        e.variables?.forEach(v => {
+          const key = `${e.id}-${v.dir}-${v.valorBooleano !== null ? 'B' : 'N'}`;
+          m.set(key, v);
+        });
+        prevVarMap.set(e.id, m);
+      });
+
       // guardamos la última fecha recibida para cada equipo si hace falta
       const lastTimestamps = new Map<number, number>();
       // si tenemos lastUpdate previo, asignarlo a todos, después se sobrescribirá
@@ -86,6 +100,33 @@ export const DashboardSlice = createSlice({
           nuevo.estado = anterior;
         }
 
+        // Si el equipo trae variables, intentar fusionarlas con las previas
+        if (Array.isArray(nuevo.variables) && nuevo.variables.length > 0) {
+          const prevVars = prevVarMap.get(e.id) ?? new Map<string, any>();
+          const now = Date.now();
+          const pending = state.pendingWrites ?? {};
+          // limpiar entradas antiguas
+          Object.keys(pending).forEach(k => {
+            if (now - (pending[k] ?? 0) > 10000) {
+              delete pending[k];
+            }
+          });
+
+          nuevo.variables = nuevo.variables.map(v => {
+            const typeFlag = v.valorBooleano !== null ? 'B' : 'N';
+            const key = `${e.id}-${v.dir}-${typeFlag}`;
+            // si hay una escritura pendiente reciente, preservamos el valor local
+            if (pending[key] && now - pending[key] < 5000) {
+              const prev = prevVars.get(key);
+              if (prev) {
+                return { ...v, valorNumerico: prev.valorNumerico, valorBooleano: prev.valorBooleano };
+              }
+            }
+            return v;
+          });
+          state.pendingWrites = pending;
+        }
+
         return nuevo;
       });
 
@@ -96,15 +137,33 @@ export const DashboardSlice = createSlice({
     // acción disparada cuando un comando de escritura fue exitoso
     dashboardVariableWritten(state, action: PayloadAction<{ equipoId: number; dir: number; value: boolean | number }>) {
       const { equipoId, dir, value } = action.payload;
-      const eq = state.equipos.find(e => e.id === equipoId);
-      if (!eq || !eq.variables) return;
-      const variable = eq.variables.find(v => v.dir === dir);
-      if (!variable) return;
-      if (typeof value === 'boolean') {
-        variable.valorBooleano = value;
-      } else {
-        variable.valorNumerico = value; // ya es number gracias al tipo de la acción
-      }
+      // rebuild equipos array with updated variable, preserving immutability
+      state.equipos = state.equipos.map(e => {
+        if (e.id !== equipoId || !e.variables) return e;
+        const newVars = e.variables.map(v => {
+          if (
+            v.dir === dir &&
+            ((typeof value === 'boolean' && v.valorBooleano !== null) || (typeof value === 'number' && v.valorNumerico !== null))
+          ) {
+            // create new variable object with updated value
+            return {
+              ...v,
+              valorBooleano: typeof value === 'boolean' ? value : v.valorBooleano,
+              valorNumerico: typeof value === 'number' ? value : v.valorNumerico,
+            };
+          }
+          return v;
+        });
+        return {
+          ...e,
+          variables: newVars,
+        };
+      });
+      // marcar esta variable como escrita recientemente para evitar sobrescrituras
+      const typeFlag = typeof value === 'boolean' ? 'B' : 'N';
+      const key = `${equipoId}-${dir}-${typeFlag}`;
+      if (!state.pendingWrites) state.pendingWrites = {};
+      state.pendingWrites[key] = Date.now();
     },
   },
 });

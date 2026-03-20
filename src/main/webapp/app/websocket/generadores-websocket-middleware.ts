@@ -58,7 +58,7 @@ const generadoresWebsocketMiddleware: Middleware = store => next => (action: Any
           const { grupoId, tipo, direccion, valor, exito } = message.payload;
           if (exito && (tipo === 'COIL' || tipo === 'REGISTRO')) {
             const equipoId = parseInt(grupoId, 10);
-            const v = tipo === 'COIL' ? valor === true : (valor as number);
+            const v = tipo === 'COIL' ? valor === true : Number(valor);
             store.dispatch(
               // acción importada en este módulo al comienzo
               dashboardVariableWritten({ equipoId, dir: direccion, value: v }),
