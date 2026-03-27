@@ -3,6 +3,7 @@ import { IEquipo } from 'app/shared/model/equipo.model';
 import { IEventoPlantilla } from 'app/shared/model/evento-plantilla.model';
 import { TipoRegistro } from 'app/shared/model/enumerations/tipo-registro.model';
 import { TipoDato } from 'app/shared/model/enumerations/tipo-dato.model';
+import { Severidad } from 'app/shared/model/enumerations/severidad.model';
 
 export interface IEventoEquipo {
   id?: number;
@@ -16,6 +17,7 @@ export interface IEventoEquipo {
   timestampActualizacion?: dayjs.Dayjs | null;
   intervaloLectura?: number | null;
   umbralAlerta?: number | null;
+  severidadAlerta?: keyof typeof Severidad | null;
   equipo?: IEquipo | null;
   plantilla?: IEventoPlantilla | null;
 }

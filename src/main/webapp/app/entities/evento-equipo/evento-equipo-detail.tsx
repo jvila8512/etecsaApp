@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Button, Col, Row } from 'reactstrap';
 import { TextFormat, Translate } from 'react-jhipster';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Box, Button, Paper, Typography } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import EditIcon from '@mui/icons-material/Edit';
 
 import { APP_DATE_FORMAT } from 'app/config/constants';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
@@ -20,106 +21,103 @@ export const EventoEquipoDetail = () => {
 
   const eventoEquipoEntity = useAppSelector(state => state.eventoEquipo.entity);
   return (
-    <Row>
-      <Col md="8">
-        <h2 data-cy="eventoEquipoDetailsHeading">
-          <Translate contentKey="appsupervisorApp.eventoEquipo.detail.title">EventoEquipo</Translate>
-        </h2>
-        <dl className="jh-entity-details">
-          <dt>
-            <span id="id">
-              <Translate contentKey="global.field.id">ID</Translate>
-            </span>
-          </dt>
-          <dd>{eventoEquipoEntity.id}</dd>
-          <dt>
-            <span id="nombreVariable">
-              <Translate contentKey="appsupervisorApp.eventoEquipo.nombreVariable">Nombre Variable</Translate>
-            </span>
-          </dt>
-          <dd>{eventoEquipoEntity.nombreVariable}</dd>
-          <dt>
-            <span id="direccionModbus">
-              <Translate contentKey="appsupervisorApp.eventoEquipo.direccionModbus">Direccion Modbus</Translate>
-            </span>
-          </dt>
-          <dd>{eventoEquipoEntity.direccionModbus}</dd>
-          <dt>
-            <span id="tipoRegistro">
-              <Translate contentKey="appsupervisorApp.eventoEquipo.tipoRegistro">Tipo Registro</Translate>
-            </span>
-          </dt>
-          <dd>{eventoEquipoEntity.tipoRegistro}</dd>
-          <dt>
-            <span id="tipoDato">
-              <Translate contentKey="appsupervisorApp.eventoEquipo.tipoDato">Tipo Dato</Translate>
-            </span>
-          </dt>
-          <dd>{eventoEquipoEntity.tipoDato}</dd>
-          <dt>
-            <span id="esEscribible">
-              <Translate contentKey="appsupervisorApp.eventoEquipo.esEscribible">Es Escribible</Translate>
-            </span>
-          </dt>
-          <dd>{eventoEquipoEntity.esEscribible ? 'true' : 'false'}</dd>
-          <dt>
-            <span id="valorNumerico">
-              <Translate contentKey="appsupervisorApp.eventoEquipo.valorNumerico">Valor Numerico</Translate>
-            </span>
-          </dt>
-          <dd>{eventoEquipoEntity.valorNumerico}</dd>
-          <dt>
-            <span id="valorBooleano">
-              <Translate contentKey="appsupervisorApp.eventoEquipo.valorBooleano">Valor Booleano</Translate>
-            </span>
-          </dt>
-          <dd>{eventoEquipoEntity.valorBooleano ? 'true' : 'false'}</dd>
-          <dt>
-            <span id="timestampActualizacion">
-              <Translate contentKey="appsupervisorApp.eventoEquipo.timestampActualizacion">Timestamp Actualizacion</Translate>
-            </span>
-          </dt>
-          <dd>
+    <Paper sx={{ p: 3 }}>
+      <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>
+        <Translate contentKey="appsupervisorApp.eventoEquipo.detail.title">EventoEquipo</Translate>
+      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="global.field.id">ID</Translate>:
+          </Typography>
+          <Typography>{eventoEquipoEntity.id}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.eventoEquipo.nombreVariable">Nombre Variable</Translate>:
+          </Typography>
+          <Typography>{eventoEquipoEntity.nombreVariable}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.eventoEquipo.direccionModbus">Direccion Modbus</Translate>:
+          </Typography>
+          <Typography>{eventoEquipoEntity.direccionModbus}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.eventoEquipo.tipoRegistro">Tipo Registro</Translate>:
+          </Typography>
+          <Typography>{eventoEquipoEntity.tipoRegistro}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.eventoEquipo.tipoDato">Tipo Dato</Translate>:
+          </Typography>
+          <Typography>{eventoEquipoEntity.tipoDato}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.eventoEquipo.esEscribible">Es Escribible</Translate>:
+          </Typography>
+          <Typography>{eventoEquipoEntity.esEscribible ? 'true' : 'false'}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.eventoEquipo.valorNumerico">Valor Numerico</Translate>:
+          </Typography>
+          <Typography>{eventoEquipoEntity.valorNumerico}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.eventoEquipo.valorBooleano">Valor Booleano</Translate>:
+          </Typography>
+          <Typography>{eventoEquipoEntity.valorBooleano ? 'true' : 'false'}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.eventoEquipo.timestampActualizacion">Timestamp Actualizacion</Translate>:
+          </Typography>
+          <Typography>
             {eventoEquipoEntity.timestampActualizacion ? (
               <TextFormat value={eventoEquipoEntity.timestampActualizacion} type="date" format={APP_DATE_FORMAT} />
             ) : null}
-          </dd>
-          <dt>
-            <span id="intervaloLectura">
-              <Translate contentKey="appsupervisorApp.eventoEquipo.intervaloLectura">Intervalo Lectura</Translate>
-            </span>
-          </dt>
-          <dd>{eventoEquipoEntity.intervaloLectura}</dd>
-          <dt>
-            <span id="umbralAlerta">
-              <Translate contentKey="appsupervisorApp.eventoEquipo.umbralAlerta">Umbral Alerta</Translate>
-            </span>
-          </dt>
-          <dd>{eventoEquipoEntity.umbralAlerta}</dd>
-          <dt>
-            <Translate contentKey="appsupervisorApp.eventoEquipo.equipo">Equipo</Translate>
-          </dt>
-          <dd>{eventoEquipoEntity.equipo ? eventoEquipoEntity.equipo.nombre : ''}</dd>
-          <dt>
-            <Translate contentKey="appsupervisorApp.eventoEquipo.plantilla">Plantilla</Translate>
-          </dt>
-          <dd>{eventoEquipoEntity.plantilla ? eventoEquipoEntity.plantilla.nombre : ''}</dd>
-        </dl>
-        <Button tag={Link} to="/evento-equipo" replace color="info" data-cy="entityDetailsBackButton">
-          <FontAwesomeIcon icon="arrow-left" />{' '}
-          <span className="d-none d-md-inline">
-            <Translate contentKey="entity.action.back">Back</Translate>
-          </span>
+          </Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.eventoEquipo.intervaloLectura">Intervalo Lectura</Translate>:
+          </Typography>
+          <Typography>{eventoEquipoEntity.intervaloLectura}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.eventoEquipo.umbralAlerta">Umbral Alerta</Translate>:
+          </Typography>
+          <Typography>{eventoEquipoEntity.umbralAlerta}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.eventoEquipo.equipo">Equipo</Translate>:
+          </Typography>
+          <Typography>{eventoEquipoEntity.equipo ? eventoEquipoEntity.equipo.nombre : ''}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.eventoEquipo.plantilla">Plantilla</Translate>:
+          </Typography>
+          <Typography>{eventoEquipoEntity.plantilla ? eventoEquipoEntity.plantilla.nombre : ''}</Typography>
+        </Box>
+      </Box>
+      <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+        <Button component={Link} to="/evento-equipo" replace color="info" startIcon={<ArrowBackIcon />} data-cy="entityDetailsBackButton">
+          <Translate contentKey="entity.action.back">Back</Translate>
         </Button>
-        &nbsp;
-        <Button tag={Link} to={`/evento-equipo/${eventoEquipoEntity.id}/edit`} replace color="primary">
-          <FontAwesomeIcon icon="pencil-alt" />{' '}
-          <span className="d-none d-md-inline">
-            <Translate contentKey="entity.action.edit">Edit</Translate>
-          </span>
+        <Button component={Link} to={`/evento-equipo/${eventoEquipoEntity.id}/edit`} replace variant="contained" startIcon={<EditIcon />}>
+          <Translate contentKey="entity.action.edit">Edit</Translate>
         </Button>
-      </Col>
-    </Row>
+      </Box>
+    </Paper>
   );
 };
 

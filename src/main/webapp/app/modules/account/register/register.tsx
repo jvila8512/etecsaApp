@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Translate, ValidatedField, ValidatedForm, isEmail, translate } from 'react-jhipster';
-import { Alert, Button, Col, Row } from 'reactstrap';
 import { toast } from 'react-toastify';
 import { Link } from 'react-router-dom';
+import { Alert, Box, Button, Container, Paper, Typography, Link as MuiLink } from '@mui/material';
 
 import PasswordStrengthBar from 'app/shared/layout/password/password-strength-bar';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
@@ -36,17 +36,14 @@ export const RegisterPage = () => {
   }, [successMessage]);
 
   return (
-    <div>
-      <Row className="justify-content-center">
-        <Col md="8">
-          <h1 id="register-title" data-cy="registerTitle">
-            <Translate contentKey="register.title">Registration</Translate>
-          </h1>
-        </Col>
-      </Row>
-      <Row className="justify-content-center">
-        <Col md="8">
-          <ValidatedForm id="register-form" onSubmit={handleValidSubmit}>
+    <Container maxWidth="sm" sx={{ py: 4 }}>
+      <Paper sx={{ p: 4 }}>
+        <Typography variant="h5" id="register-title" data-cy="registerTitle" sx={{ mb: 3, fontWeight: 700 }}>
+          <Translate contentKey="register.title">Registration</Translate>
+        </Typography>
+
+        <ValidatedForm id="register-form" onSubmit={handleValidSubmit}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <ValidatedField
               name="username"
               label={translate('global.form.username.label')}
@@ -102,29 +99,29 @@ export const RegisterPage = () => {
               }}
               data-cy="secondPassword"
             />
-            <Button id="register-submit" color="primary" type="submit" data-cy="submit">
+            <Button id="register-submit" variant="contained" type="submit" data-cy="submit" sx={{ mt: 1 }}>
               <Translate contentKey="register.form.button">Register</Translate>
             </Button>
-          </ValidatedForm>
-          <p>&nbsp;</p>
-          <Alert color="warning">
-            <span>
-              <Translate contentKey="global.messages.info.authenticated.prefix">If you want to</Translate>{' '}
-            </span>
-            <Link to="/login" className="alert-link">
-              <Translate contentKey="global.messages.info.authenticated.link">sign in</Translate>
-            </Link>
-            <span>
-              <Translate contentKey="global.messages.info.authenticated.suffix">
-                , you can try the default accounts:
-                <br />- Administrator (login=&quot;admin&quot; and password=&quot;admin&quot;)
-                <br />- User (login=&quot;user&quot; and password=&quot;user&quot;).
-              </Translate>
-            </span>
-          </Alert>
-        </Col>
-      </Row>
-    </div>
+          </Box>
+        </ValidatedForm>
+
+        <Alert severity="warning" sx={{ mt: 3 }}>
+          <span>
+            <Translate contentKey="global.messages.info.authenticated.prefix">If you want to</Translate>{' '}
+          </span>
+          <MuiLink component={Link} to="/login" underline="hover">
+            <Translate contentKey="global.messages.info.authenticated.link">sign in</Translate>
+          </MuiLink>
+          <span>
+            <Translate contentKey="global.messages.info.authenticated.suffix">
+              , you can try the default accounts:
+              <br />- Administrator (login=&quot;admin&quot; and password=&quot;admin&quot;)
+              <br />- User (login=&quot;user&quot; and password=&quot;user&quot;).
+            </Translate>
+          </span>
+        </Alert>
+      </Paper>
+    </Container>
   );
 };
 

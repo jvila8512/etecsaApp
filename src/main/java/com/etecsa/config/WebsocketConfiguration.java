@@ -37,7 +37,7 @@ public class WebsocketConfiguration implements WebSocketMessageBrokerConfigurer 
         // /topic/** incluye:
         //  - /topic/generadores/**
         //  - /topic/dashboard
-        config.enableSimpleBroker("/topic", "/topic/generadores");
+        config.enableSimpleBroker("/topic", "/topic/generadores", "/topic/alarmas");
     }
 
     @Override
@@ -67,6 +67,14 @@ public class WebsocketConfiguration implements WebSocketMessageBrokerConfigurer 
         // Endpoint para el dashboard en tiempo real (Home)
         registry
             .addEndpoint("/websocket/dashboard")
+            .setHandshakeHandler(defaultHandshakeHandler())
+            .setAllowedOrigins(allowedOrigins)
+            .withSockJS()
+            .setInterceptors(httpSessionHandshakeInterceptor());
+
+        // Endpoint para alarmas en tiempo real
+        registry
+            .addEndpoint("/websocket/alarmas")
             .setHandshakeHandler(defaultHandshakeHandler())
             .setAllowedOrigins(allowedOrigins)
             .withSockJS()

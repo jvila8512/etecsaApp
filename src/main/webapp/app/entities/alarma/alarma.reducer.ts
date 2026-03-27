@@ -4,7 +4,22 @@ import { cleanEntity } from 'app/shared/util/entity-utils';
 import { EntityState, IQueryParams, createEntitySlice, serializeAxiosError } from 'app/shared/reducers/reducer.utils';
 import { IAlarma, defaultValue } from 'app/shared/model/alarma.model';
 
-const initialState: EntityState<IAlarma> = {
+export interface AlarmaDeteccion {
+  eventoId: number;
+  descripcion?: string;
+  severidad?: string;
+  mensajeUsuario?: string;
+  valorActual?: number;
+  umbral?: number;
+  valorBooleano?: boolean;
+  esAlarma: boolean;
+}
+
+interface AlarmaState extends EntityState<IAlarma> {
+  alarmasActivasMap: Record<number, IAlarma[]>;
+}
+
+const initialState: AlarmaState = {
   loading: false,
   errorMessage: null,
   entities: [],
@@ -12,6 +27,7 @@ const initialState: EntityState<IAlarma> = {
   updating: false,
   totalItems: 0,
   updateSuccess: false,
+  alarmasActivasMap: {},
 };
 
 const apiUrl = 'api/alarmas';
@@ -77,11 +93,66 @@ export const deleteEntity = createAsyncThunk(
   { serializeError: serializeAxiosError },
 );
 
+export const procesarDeteccion = createAsyncThunk(
+  'alarma/procesar_deteccion',
+  async (deteccion: AlarmaDeteccion, thunkAPI) => {
+    const result = await axios.post<IAlarma>(`${apiUrl}/procesar-deteccion`, deteccion);
+    if (result.status === 204) {
+      return null;
+    }
+    return result.data;
+  },
+  { serializeError: serializeAxiosError },
+);
+
+export const reconocerAlarma = createAsyncThunk(
+  'alarma/reconocer',
+  async (id: number, thunkAPI) => {
+    const result = await axios.post<IAlarma>(`${apiUrl}/${id}/reconocer`);
+    thunkAPI.dispatch(getEntities({}));
+    return result.data;
+  },
+  { serializeError: serializeAxiosError },
+);
+
+export const finalizarAlarma = createAsyncThunk(
+  'alarma/finalizar',
+  async (id: number, thunkAPI) => {
+    const result = await axios.post<IAlarma>(`${apiUrl}/${id}/finalizar`);
+    thunkAPI.dispatch(getEntities({}));
+    return result.data;
+  },
+  { serializeError: serializeAxiosError },
+);
+
+export const getAlarmasActivasParaEvento = createAsyncThunk(
+  'alarma/activas_por_evento',
+  async (eventoId: number) => {
+    const result = await axios.get<IAlarma[]>(`${apiUrl}/activas/evento/${eventoId}`);
+    return { eventoId, alarmas: result.data };
+  },
+  { serializeError: serializeAxiosError },
+);
+
+export const getAlarmasActivasBulk = createAsyncThunk(
+  'alarma/activas_bulk',
+  async (eventoIds: number[]) => {
+    const promises = eventoIds.map(id => axios.get<IAlarma[]>(`${apiUrl}/activas/evento/${id}`));
+    const results = await Promise.all(promises);
+    const map: Record<number, IAlarma[]> = {};
+    eventoIds.forEach((id, index) => {
+      map[id] = results[index].data;
+    });
+    return map;
+  },
+  { serializeError: serializeAxiosError },
+);
+
 // slice
 
 export const AlarmaSlice = createEntitySlice({
   name: 'alarma',
-  initialState,
+  initialState: initialState as unknown as EntityState<IAlarma> & { alarmasActivasMap: Record<number, IAlarma[]> },
   extraReducers(builder) {
     builder
       .addCase(getEntity.fulfilled, (state, action) => {
@@ -92,6 +163,15 @@ export const AlarmaSlice = createEntitySlice({
         state.updating = false;
         state.updateSuccess = true;
         state.entity = {};
+      })
+      .addCase(getAlarmasActivasParaEvento.fulfilled, (state, action) => {
+        const { eventoId, alarmas } = action.payload;
+        const s = state as unknown as AlarmaState;
+        s.alarmasActivasMap[eventoId] = alarmas;
+      })
+      .addCase(getAlarmasActivasBulk.fulfilled, (state, action) => {
+        const s = state as unknown as AlarmaState;
+        s.alarmasActivasMap = action.payload;
       })
       .addMatcher(isFulfilled(getEntities), (state, action) => {
         const { data, headers } = action.payload;
@@ -108,6 +188,35 @@ export const AlarmaSlice = createEntitySlice({
         state.loading = false;
         state.updateSuccess = true;
         state.entity = action.payload.data;
+      })
+      .addMatcher(isFulfilled(procesarDeteccion), (state, action) => {
+        if (action.payload) {
+          const nuevaAlarma = action.payload;
+          if (nuevaAlarma.evento?.id) {
+            const s = state as unknown as AlarmaState;
+            if (!s.alarmasActivasMap[nuevaAlarma.evento.id]) {
+              s.alarmasActivasMap[nuevaAlarma.evento.id] = [];
+            }
+            s.alarmasActivasMap[nuevaAlarma.evento.id].push(nuevaAlarma);
+          }
+        }
+      })
+      .addMatcher(isFulfilled(reconocerAlarma, finalizarAlarma), (state, action) => {
+        const alarmaActualizada = action.payload;
+        if (alarmaActualizada?.evento?.id) {
+          const eventoId = alarmaActualizada.evento.id;
+          const s = state as unknown as AlarmaState;
+          if (s.alarmasActivasMap[eventoId]) {
+            if (alarmaActualizada.estado === 'FINALIZADA') {
+              s.alarmasActivasMap[eventoId] = s.alarmasActivasMap[eventoId].filter(a => a.id !== alarmaActualizada.id);
+            } else {
+              const index = s.alarmasActivasMap[eventoId].findIndex(a => a.id === alarmaActualizada.id);
+              if (index >= 0) {
+                s.alarmasActivasMap[eventoId][index] = alarmaActualizada;
+              }
+            }
+          }
+        }
       })
       .addMatcher(isPending(getEntities, getEntity), state => {
         state.errorMessage = null;

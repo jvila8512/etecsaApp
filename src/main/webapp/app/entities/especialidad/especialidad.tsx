@@ -1,28 +1,66 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Button, Table } from 'reactstrap';
-import { JhiItemCount, JhiPagination, Translate, getPaginationState } from 'react-jhipster';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { JhiPagination, Translate, getPaginationState, translate } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSort, faSortDown, faSortUp } from '@fortawesome/free-solid-svg-icons';
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Toolbar,
+  Typography,
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { ASC, DESC, ITEMS_PER_PAGE, SORT } from 'app/shared/util/pagination.constants';
 import { overridePaginationStateWithQueryParams } from 'app/shared/util/entity-utils';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 
-import { getEntities } from './especialidad.reducer';
+import Spinner from '../loader/spinner';
+import { getEntities, createEntity, updateEntity, deleteEntity } from './especialidad.reducer';
+import { IEspecialidad } from 'app/shared/model/especialidad.model';
 
 export const Especialidad = () => {
   const dispatch = useAppDispatch();
-
   const pageLocation = useLocation();
   const navigate = useNavigate();
+
+  const especialidadList = useAppSelector(state => state.especialidad.entities);
+  const loading = useAppSelector(state => state.especialidad.loading);
+  const updating = useAppSelector(state => state.especialidad.updating);
+  const updateSuccess = useAppSelector(state => state.especialidad.updateSuccess);
+  const totalItems = useAppSelector(state => state.especialidad.totalItems);
 
   const [paginationState, setPaginationState] = useState(
     overridePaginationStateWithQueryParams(getPaginationState(pageLocation, ITEMS_PER_PAGE, 'id'), pageLocation.search),
   );
 
-  const especialidadList = useAppSelector(state => state.especialidad.entities);
-  const loading = useAppSelector(state => state.especialidad.loading);
-  const totalItems = useAppSelector(state => state.especialidad.totalItems);
+  const [selectedEspecialidad, setSelectedEspecialidad] = useState<IEspecialidad | null>(null);
+  const [especialidadDialog, setEspecialidadDialog] = useState(false);
+  const [deleteEspecialidadDialog, setDeleteEspecialidadDialog] = useState(false);
+  const [globalFilter, setGlobalFilterValue] = useState('');
+  const [formKey, setFormKey] = useState(0);
+
+  const [formValues, setFormValues] = useState({
+    nombre: '',
+    codigo: '',
+    descripcionTecnica: '',
+  });
 
   const getAllEntities = () => {
     dispatch(
@@ -61,150 +99,248 @@ export const Especialidad = () => {
     }
   }, [pageLocation.search]);
 
-  const sort = p => () => {
+  useEffect(() => {
+    if (updateSuccess) {
+      setEspecialidadDialog(false);
+      setSelectedEspecialidad(null);
+      setFormValues({ nombre: '', codigo: '', descripcionTecnica: '' });
+    }
+  }, [updateSuccess]);
+
+  const sort = (field: string) => {
     setPaginationState({
       ...paginationState,
       order: paginationState.order === ASC ? DESC : ASC,
-      sort: p,
+      sort: field,
     });
   };
 
-  const handlePagination = currentPage =>
-    setPaginationState({
-      ...paginationState,
-      activePage: currentPage,
-    });
+  const handlePagination = (currentPage: number) => setPaginationState({ ...paginationState, activePage: currentPage });
+  const handleSyncList = () => sortEntities();
 
-  const handleSyncList = () => {
-    sortEntities();
+  const onGlobalFilterChange = e => {
+    setGlobalFilterValue(e.target.value);
   };
 
-  const getSortIconByFieldName = (fieldName: string) => {
-    const sortFieldName = paginationState.sort;
-    const order = paginationState.order;
-    if (sortFieldName !== fieldName) {
-      return faSort;
+  const filteredList = especialidadList?.filter(
+    e =>
+      !globalFilter ||
+      e.nombre?.toLowerCase().includes(globalFilter.toLowerCase()) ||
+      e.codigo?.toLowerCase().includes(globalFilter.toLowerCase()),
+  );
+
+  const verDialogNuevo = () => {
+    setSelectedEspecialidad(null);
+    setFormValues({ nombre: '', codigo: '', descripcionTecnica: '' });
+    setFormKey(prev => prev + 1);
+    setEspecialidadDialog(true);
+  };
+
+  const actualizar = (rowData: IEspecialidad) => {
+    setSelectedEspecialidad(rowData);
+    setFormValues({
+      nombre: rowData.nombre || '',
+      codigo: rowData.codigo || '',
+      descripcionTecnica: rowData.descripcionTecnica || '',
+    });
+    setFormKey(prev => prev + 1);
+    setEspecialidadDialog(true);
+  };
+
+  const hideDialogNuevo = () => {
+    setEspecialidadDialog(false);
+    setSelectedEspecialidad(null);
+    setFormValues({ nombre: '', codigo: '', descripcionTecnica: '' });
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormValues(prev => ({ ...prev, [name]: value }));
+  };
+
+  const guardar = () => {
+    const entity: any = {
+      nombre: formValues.nombre,
+      codigo: formValues.codigo,
+      descripcionTecnica: formValues.descripcionTecnica || null,
+    };
+
+    if (selectedEspecialidad?.id) {
+      entity.id = selectedEspecialidad.id;
+      dispatch(updateEntity(entity));
+    } else {
+      dispatch(createEntity(entity));
     }
-    return order === ASC ? faSortUp : faSortDown;
+  };
+
+  const verEliminar = (rowData: IEspecialidad) => {
+    setSelectedEspecialidad(rowData);
+    setDeleteEspecialidadDialog(true);
+  };
+
+  const deleteEspecialidad = () => {
+    if (!selectedEspecialidad?.id) return;
+    dispatch(deleteEntity(selectedEspecialidad.id));
+    setDeleteEspecialidadDialog(false);
+    setSelectedEspecialidad(null);
+  };
+
+  const hideDeleteDialog = () => {
+    setDeleteEspecialidadDialog(false);
+    setSelectedEspecialidad(null);
   };
 
   return (
-    <div>
-      <h2 id="especialidad-heading" data-cy="EspecialidadHeading">
-        <Translate contentKey="appsupervisorApp.especialidad.home.title">Especialidads</Translate>
-        <div className="d-flex justify-content-end">
-          <Button className="me-2" color="info" onClick={handleSyncList} disabled={loading}>
-            <FontAwesomeIcon icon="sync" spin={loading} />{' '}
-            <Translate contentKey="appsupervisorApp.especialidad.home.refreshListLabel">Refresh List</Translate>
+    <Paper sx={{ p: 3 }}>
+      <Toolbar sx={{ justifyContent: 'space-between', mb: 2, px: 0 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700 }}>
+          Especialidades
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button variant="outlined" startIcon={<RefreshIcon />} onClick={handleSyncList} disabled={loading}>
+            Actualizar
           </Button>
-          <Link to="/especialidad/new" className="btn btn-primary jh-create-entity" id="jh-create-entity" data-cy="entityCreateButton">
-            <FontAwesomeIcon icon="plus" />
-            &nbsp;
-            <Translate contentKey="appsupervisorApp.especialidad.home.createLabel">Create new Especialidad</Translate>
-          </Link>
-        </div>
-      </h2>
-      <div className="table-responsive">
-        {especialidadList && especialidadList.length > 0 ? (
-          <Table responsive>
-            <thead>
-              <tr>
-                <th className="hand" onClick={sort('id')}>
-                  <Translate contentKey="appsupervisorApp.especialidad.id">ID</Translate>{' '}
-                  <FontAwesomeIcon icon={getSortIconByFieldName('id')} />
-                </th>
-                <th className="hand" onClick={sort('nombre')}>
-                  <Translate contentKey="appsupervisorApp.especialidad.nombre">Nombre</Translate>{' '}
-                  <FontAwesomeIcon icon={getSortIconByFieldName('nombre')} />
-                </th>
-                <th className="hand" onClick={sort('codigo')}>
-                  <Translate contentKey="appsupervisorApp.especialidad.codigo">Codigo</Translate>{' '}
-                  <FontAwesomeIcon icon={getSortIconByFieldName('codigo')} />
-                </th>
-                <th className="hand" onClick={sort('descripcionTecnica')}>
-                  <Translate contentKey="appsupervisorApp.especialidad.descripcionTecnica">Descripcion Tecnica</Translate>{' '}
-                  <FontAwesomeIcon icon={getSortIconByFieldName('descripcionTecnica')} />
-                </th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {especialidadList.map((especialidad, i) => (
-                <tr key={`entity-${i}`} data-cy="entityTable">
-                  <td>
-                    <Button tag={Link} to={`/especialidad/${especialidad.id}`} color="link" size="sm">
-                      {especialidad.id}
-                    </Button>
-                  </td>
-                  <td>{especialidad.nombre}</td>
-                  <td>{especialidad.codigo}</td>
-                  <td>{especialidad.descripcionTecnica}</td>
-                  <td className="text-end">
-                    <div className="btn-group flex-btn-group-container">
-                      <Button tag={Link} to={`/especialidad/${especialidad.id}`} color="info" size="sm" data-cy="entityDetailsButton">
-                        <FontAwesomeIcon icon="eye" />{' '}
-                        <span className="d-none d-md-inline">
-                          <Translate contentKey="entity.action.view">View</Translate>
-                        </span>
-                      </Button>
-                      <Button
-                        tag={Link}
-                        to={`/especialidad/${especialidad.id}/edit?page=${paginationState.activePage}&sort=${paginationState.sort},${paginationState.order}`}
-                        color="primary"
-                        size="sm"
-                        data-cy="entityEditButton"
-                      >
-                        <FontAwesomeIcon icon="pencil-alt" />{' '}
-                        <span className="d-none d-md-inline">
-                          <Translate contentKey="entity.action.edit">Edit</Translate>
-                        </span>
-                      </Button>
-                      <Button
-                        onClick={() =>
-                          (window.location.href = `/especialidad/${especialidad.id}/delete?page=${paginationState.activePage}&sort=${paginationState.sort},${paginationState.order}`)
-                        }
-                        color="danger"
-                        size="sm"
-                        data-cy="entityDeleteButton"
-                      >
-                        <FontAwesomeIcon icon="trash" />{' '}
-                        <span className="d-none d-md-inline">
-                          <Translate contentKey="entity.action.delete">Delete</Translate>
-                        </span>
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        ) : (
-          !loading && (
-            <div className="alert alert-warning">
-              <Translate contentKey="appsupervisorApp.especialidad.home.notFound">No Especialidads found</Translate>
-            </div>
-          )
-        )}
-      </div>
-      {totalItems ? (
-        <div className={especialidadList && especialidadList.length > 0 ? '' : 'd-none'}>
-          <div className="justify-content-center d-flex">
-            <JhiItemCount page={paginationState.activePage} total={totalItems} itemsPerPage={paginationState.itemsPerPage} i18nEnabled />
-          </div>
-          <div className="justify-content-center d-flex">
-            <JhiPagination
-              activePage={paginationState.activePage}
-              onSelect={handlePagination}
-              maxButtons={5}
-              itemsPerPage={paginationState.itemsPerPage}
-              totalItems={totalItems}
-            />
-          </div>
-        </div>
-      ) : (
-        ''
-      )}
-    </div>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={verDialogNuevo}>
+            Nueva Especialidad
+          </Button>
+        </Box>
+      </Toolbar>
+
+      <TextField
+        size="small"
+        placeholder="Buscar..."
+        value={globalFilter}
+        onChange={onGlobalFilterChange}
+        InputProps={{
+          startAdornment: <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />,
+        }}
+        sx={{ mb: 2, width: 300 }}
+      />
+
+      <TableContainer sx={{ overflowX: 'auto' }}>
+        <Table sx={{ minWidth: 900 }}>
+          <TableHead>
+            <TableRow sx={{ bgcolor: '#f8fafc' }}>
+              <TableCell sx={{ fontWeight: 600 }}>Id</TableCell>
+              <TableCell sx={{ fontWeight: 600, cursor: 'pointer' }} onClick={() => sort('nombre')}>
+                Nombre
+              </TableCell>
+              <TableCell sx={{ fontWeight: 600, cursor: 'pointer' }} onClick={() => sort('codigo')}>
+                Código
+              </TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Descripción Técnica</TableCell>
+              <TableCell sx={{ fontWeight: 600 }}>Acciones</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredList?.map((e: IEspecialidad) => (
+              <TableRow key={e.id} hover>
+                <TableCell>{e.id}</TableCell>
+                <TableCell sx={{ fontWeight: 500 }}>{e.nombre}</TableCell>
+                <TableCell>{e.codigo}</TableCell>
+                <TableCell>{e.descripcionTecnica}</TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <IconButton size="small" color="warning" onClick={() => actualizar(e)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" color="error" onClick={() => verEliminar(e)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {totalItems && especialidadList && especialidadList.length > 0 ? (
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+          <JhiPagination
+            activePage={paginationState.activePage}
+            onSelect={handlePagination}
+            maxButtons={5}
+            itemsPerPage={paginationState.itemsPerPage}
+            totalItems={totalItems}
+          />
+        </Box>
+      ) : null}
+
+      <Dialog open={especialidadDialog} onClose={() => {}} maxWidth="sm" fullWidth>
+        <DialogTitle>{selectedEspecialidad ? 'Editar Especialidad' : 'Nueva Especialidad'}</DialogTitle>
+        <DialogContent>
+          {loading ? (
+            <Spinner />
+          ) : (
+            <form key={formKey}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                <TextField
+                  label={translate('appsupervisorApp.especialidad.nombre')}
+                  id="especialidad-nombre"
+                  name="nombre"
+                  value={formValues.nombre}
+                  onChange={handleInputChange}
+                  fullWidth
+                  required
+                  error={!formValues.nombre}
+                  helperText={!formValues.nombre ? translate('entity.validation.required') : ''}
+                />
+                <TextField
+                  label={translate('appsupervisorApp.especialidad.codigo')}
+                  id="especialidad-codigo"
+                  name="codigo"
+                  value={formValues.codigo}
+                  onChange={handleInputChange}
+                  fullWidth
+                  required
+                  error={!formValues.codigo}
+                  helperText={!formValues.codigo ? translate('entity.validation.required') : ''}
+                />
+                <TextField
+                  label={translate('appsupervisorApp.especialidad.descripcionTecnica')}
+                  id="especialidad-descripcionTecnica"
+                  name="descripcionTecnica"
+                  value={formValues.descripcionTecnica}
+                  onChange={handleInputChange}
+                  fullWidth
+                  multiline
+                  rows={3}
+                />
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+                  <Button onClick={hideDialogNuevo}>Cancelar</Button>
+                  <Button variant="contained" onClick={guardar} disabled={updating || !formValues.nombre || !formValues.codigo}>
+                    <FontAwesomeIcon icon="save" />
+                    &nbsp;
+                    <Translate contentKey="entity.action.save">Guardar</Translate>
+                  </Button>
+                </Box>
+              </Box>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deleteEspecialidadDialog} onClose={hideDeleteDialog} maxWidth="xs" fullWidth>
+        <DialogTitle>Confirmar</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
+            <WarningAmberIcon sx={{ fontSize: 40, color: '#f59e0b' }} />
+            {selectedEspecialidad && (
+              <Typography>
+                ¿Seguro que quiere eliminar la Especialidad: <strong>{selectedEspecialidad.nombre}</strong>?
+              </Typography>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={hideDeleteDialog}>No</Button>
+          <Button onClick={deleteEspecialidad} color="error" variant="contained">
+            Sí
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Paper>
   );
 };
 

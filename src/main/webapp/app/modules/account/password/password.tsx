@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Translate, ValidatedField, ValidatedForm, translate } from 'react-jhipster';
-import { Button, Col, Row } from 'reactstrap';
 import { toast } from 'react-toastify';
+import { Box, Button, Container, Paper, Typography } from '@mui/material';
 
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { getSession } from 'app/shared/reducers/authentication';
@@ -40,15 +40,16 @@ export const PasswordPage = () => {
   }, [successMessage, errorMessage]);
 
   return (
-    <div>
-      <Row className="justify-content-center">
-        <Col md="8">
-          <h2 id="password-title">
-            <Translate contentKey="password.title" interpolate={{ username: account.login }}>
-              Password for {account.login}
-            </Translate>
-          </h2>
-          <ValidatedForm id="password-form" onSubmit={handleValidSubmit}>
+    <Container maxWidth="sm" sx={{ py: 4 }}>
+      <Paper sx={{ p: 4 }}>
+        <Typography variant="h5" id="password-title" sx={{ mb: 3, fontWeight: 700 }}>
+          <Translate contentKey="password.title" interpolate={{ username: account.login }}>
+            Password for {account.login}
+          </Translate>
+        </Typography>
+
+        <ValidatedForm id="password-form" onSubmit={handleValidSubmit}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <ValidatedField
               name="currentPassword"
               label={translate('global.form.currentpassword.label')}
@@ -86,13 +87,13 @@ export const PasswordPage = () => {
               }}
               data-cy="confirmPassword"
             />
-            <Button color="success" type="submit" data-cy="submit">
+            <Button variant="contained" color="success" type="submit" data-cy="submit" sx={{ mt: 1 }}>
               <Translate contentKey="password.form.button">Save</Translate>
             </Button>
-          </ValidatedForm>
-        </Col>
-      </Row>
-    </div>
+          </Box>
+        </ValidatedForm>
+      </Paper>
+    </Container>
   );
 };
 

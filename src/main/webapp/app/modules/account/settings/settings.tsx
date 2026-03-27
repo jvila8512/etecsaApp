@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { Button, Col, Row } from 'reactstrap';
 import { Translate, ValidatedField, ValidatedForm, isEmail, translate } from 'react-jhipster';
 import { toast } from 'react-toastify';
+import { Box, Button, Container, MenuItem, Paper, Typography } from '@mui/material';
 
 import { languages, locales } from 'app/config/translation';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
@@ -36,15 +36,16 @@ export const SettingsPage = () => {
   };
 
   return (
-    <div>
-      <Row className="justify-content-center">
-        <Col md="8">
-          <h2 id="settings-title">
-            <Translate contentKey="settings.title" interpolate={{ username: account.login }}>
-              User settings for {account.login}
-            </Translate>
-          </h2>
-          <ValidatedForm id="settings-form" onSubmit={handleValidSubmit} defaultValues={account}>
+    <Container maxWidth="sm" sx={{ py: 4 }}>
+      <Paper sx={{ p: 4 }}>
+        <Typography variant="h5" id="settings-title" sx={{ mb: 3, fontWeight: 700 }}>
+          <Translate contentKey="settings.title" interpolate={{ username: account.login }}>
+            User settings for {account.login}
+          </Translate>
+        </Typography>
+
+        <ValidatedForm id="settings-form" onSubmit={handleValidSubmit} defaultValues={account}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <ValidatedField
               name="firstName"
               label={translate('settings.form.firstname')}
@@ -84,18 +85,18 @@ export const SettingsPage = () => {
             />
             <ValidatedField type="select" id="langKey" name="langKey" label={translate('settings.form.language')} data-cy="langKey">
               {locales.map(locale => (
-                <option value={locale} key={locale}>
+                <MenuItem value={locale} key={locale}>
                   {languages[locale].name}
-                </option>
+                </MenuItem>
               ))}
             </ValidatedField>
-            <Button color="primary" type="submit" data-cy="submit">
+            <Button variant="contained" type="submit" data-cy="submit" sx={{ mt: 1 }}>
               <Translate contentKey="settings.form.button">Save</Translate>
             </Button>
-          </ValidatedForm>
-        </Col>
-      </Row>
-    </div>
+          </Box>
+        </ValidatedForm>
+      </Paper>
+    </Container>
   );
 };
 

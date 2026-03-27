@@ -10,11 +10,16 @@ import com.etecsa.service.dto.EventoResumenDTO;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+/**
+ * Servicio de polling que lee valores de los equipos via Modbus.
+ * Soporta intervalo de lectura variable por cada EventoEquipo.
+ */
 @Service
 public class PollingService {
 
@@ -23,13 +28,49 @@ public class PollingService {
     private final ModBusService modBusService;
     private final EventoEquipoRepository eventoEquipoRepository;
 
+    // Mapa para trackear última vez que se envió cada variable por WebSocket
+    // Key: eventoId, Value: última vez enviada (epoch millis)
+    private final ConcurrentHashMap<Long, Long> lastSentTime = new ConcurrentHashMap<>();
+
     public PollingService(ModBusService modBusService, EventoEquipoRepository eventoEquipoRepository) {
         this.modBusService = modBusService;
         this.eventoEquipoRepository = eventoEquipoRepository;
     }
 
+    /**
+     * Determina el intervalo de lectura en segundos para una variable.
+     * Usa intervaloLectura de EventoEquipo, o默认值 de 10 segundos.
+     */
+    private int getIntervaloLectura(EventoEquipo ev, Equipo equipo) {
+        if (ev.getIntervaloLectura() != null && ev.getIntervaloLectura() > 0) {
+            return ev.getIntervaloLectura();
+        }
+        if (equipo.getIntervaloBase() != null && equipo.getIntervaloBase() > 0) {
+            return equipo.getIntervaloBase();
+        }
+        return 10; //默认值 10 segundos
+    }
+
+    /**
+     * Determina si una variable debe ser enviada por WebSocket según su intervalo.
+     */
+    private boolean debeEnviarPorWebSocket(Long eventoId, int intervaloSegundos) {
+        long now = System.currentTimeMillis();
+        long lastSent = lastSentTime.getOrDefault(eventoId, 0L);
+        long intervalMs = intervaloSegundos * 1000L;
+
+        return (now - lastSent) >= intervalMs;
+    }
+
+    /**
+     * Marca una variable como enviada por WebSocket.
+     */
+    private void marcarEnviada(Long eventoId) {
+        lastSentTime.put(eventoId, System.currentTimeMillis());
+    }
+
     @Async("modbusExecutor")
-    public CompletableFuture<DashboardEquipoDTO> procesarEquipo(Equipo equipo) {
+    public CompletableFuture<DashboardEquipoDTO> procesarEquipo(Equipo equipo, boolean enviarPorWebSocket) {
         DashboardEquipoDTO eqDto = new DashboardEquipoDTO();
         eqDto.setId(equipo.getId());
         eqDto.setNombre(equipo.getNombre());
@@ -53,32 +94,27 @@ public class PollingService {
                 // Determinar si la variable es de lectura o tiene función de escritura
                 String funcEscritura = ev.getPlantilla().getFuncionEscritura();
                 boolean esLectura = funcEscritura == null || funcEscritura.isEmpty();
-                // consulta también el flag esEscribible en el propio evento
                 if (ev.getEsEscribible() != null && ev.getEsEscribible()) {
                     esLectura = false;
                 }
 
                 EventoResumenDTO res = new EventoResumenDTO();
+                res.setId(ev.getId());
                 res.setNombreVariable(ev.getNombreVariable());
                 res.setUnidadMedida(ev.getPlantilla().getUnidadMedida());
                 res.setEsLectura(esLectura);
+                res.setUmbralAlerta(ev.getUmbralAlerta());
 
                 int dir = ev.getDireccionModbus();
                 res.setDir(dir);
 
-                // Inicializar ambos valores como null para evitar basura
                 res.setValorBooleano(null);
                 res.setValorNumerico(null);
-
-                // Si es variable de lectura, intentamos leerla del PLC.
-                // Si es escribible, también intentamos leerla si es posible,
-                // pero usamos el valor almacenado si la lectura falla.
 
                 // ══════════════════════════════════════════════════
                 // LEER SEGÚN tipoRegistro + tipoDato
                 // ══════════════════════════════════════════════════
                 switch (ev.getTipoRegistro()) {
-                    // ── BIT_LOGICO_M → FC01 Read Coils ──────────
                     case BIT_LOGICO_M: {
                         Boolean val = modBusService.readM(genId, dir);
                         if (val != null) {
@@ -87,12 +123,10 @@ public class PollingService {
                                 ev.setValorBooleano(val);
                             }
                         } else {
-                            // si la lectura falla, usar valor almacenado
                             res.setValorBooleano(ev.getValorBooleano());
                         }
                         break;
                     }
-                    // ── PALABRA_MW → FC03, 1 registro 16 bits ───
                     case PALABRA_MW: {
                         Integer raw = modBusService.readMW(genId, dir);
                         if (raw != null) {
@@ -107,7 +141,6 @@ public class PollingService {
                         }
                         break;
                     }
-                    // ── PALABRA_DOBLE_MD → FC03, 2 registros 32 bits ─
                     case PALABRA_DOBLE_MD: {
                         Long raw = modBusService.readMD(genId, dir);
                         if (raw != null) {
@@ -123,21 +156,28 @@ public class PollingService {
                         break;
                     }
                     default:
-                        LOG.warn("⚠️ TipoRegistro desconocido: {} en variable {}", ev.getTipoRegistro(), ev.getNombreVariable());
+                        LOG.warn("TipoRegistro desconocido: {} en variable {}", ev.getTipoRegistro(), ev.getNombreVariable());
                         break;
                 }
 
+                // ── SIEMPRE guardar a BD ───────────────────────────
                 ev.setTimestampActualizacion(ZonedDateTime.now());
                 eventoEquipoRepository.save(ev);
-                eqDto.getVariables().add(res);
+
+                // ── ¿Enviar por WebSocket? ────────────────────────
+                int intervalo = getIntervaloLectura(ev, equipo);
+                if (enviarPorWebSocket && debeEnviarPorWebSocket(ev.getId(), intervalo)) {
+                    eqDto.getVariables().add(res);
+                    marcarEnviada(ev.getId());
+                }
             }
 
             eqDto.setEstado("OPERATIVO");
         } catch (Exception e) {
-            LOG.error("❌ Error leyendo PLC {} ({}): {}", eqDto.getNombre(), equipo.getDireccionIp(), e.getMessage());
+            LOG.error("Error leyendo PLC {} ({}): {}", eqDto.getNombre(), equipo.getDireccionIp(), e.getMessage());
             String msg = e.getMessage() != null ? e.getMessage() : "";
             if (msg.contains("Connection") || msg.contains("Timeout") || msg.contains("closed")) {
-                modBusService.disconnectGenerator(genId); // forzar reconexión próximo ciclo
+                modBusService.disconnectGenerator(genId);
                 eqDto.setEstado("DESCONECTADO");
             } else {
                 eqDto.setEstado("ERROR");
@@ -147,73 +187,48 @@ public class PollingService {
         return CompletableFuture.completedFuture(eqDto);
     }
 
-    // ════════════════════════════════════════════════════════════
-    // HELPERS — Interpretar valor según tipoDato
-    // ════════════════════════════════════════════════════════════
-
     /**
-     * Interpreta un registro MW (16 bits unsigned) según el tipoDato configurado.
-     *
-     * Del scan sabemos que el TM221 manda cada BYTE en un registro separado.
-     * Por eso INT16/UINT16 son el valor directo del registro.
-     *
-     * tipoDato:
-     *   BOOLEAN → 0=false, cualquier otro=true
-     *   INT16   → signed  (-32768..32767)
-     *   UINT16  → unsigned (0..65535)
+     * Versión legacy para compatibilidad (envía siempre).
      */
+    @Async("modbusExecutor")
+    public CompletableFuture<DashboardEquipoDTO> procesarEquipo(Equipo equipo) {
+        return procesarEquipo(equipo, true);
+    }
+
     private Double interpretarMW(int raw, TipoDato tipoDato) {
         if (tipoDato == null) return (double) raw;
         switch (tipoDato) {
             case BOOLEAN:
                 return raw != 0 ? 1.0 : 0.0;
             case INT16:
-                return (double) (short) raw; // convierte a signed
+                return (double) (short) raw;
             case UINT16:
-                return (double) raw; // ya es unsigned por & 0xFFFF
+                return (double) raw;
             default:
-                LOG.warn("⚠️ tipoDato {} no aplica a PALABRA_MW, se usa raw", tipoDato);
                 return (double) raw;
         }
     }
 
-    /**
-     * Interpreta un registro MD (32 bits) según el tipoDato configurado.
-     *
-     * tipoDato:
-     *   INT32   → signed  (-2147483648..2147483647)
-     *   FLOAT32 → IEEE 754 float (los 32 bits son un float)
-     *   UINT16  → solo la parte baja (para compatibilidad)
-     */
     private Double interpretarMD(long raw, TipoDato tipoDato) {
         if (tipoDato == null) return (double) raw;
         switch (tipoDato) {
             case INT32: {
-                // Convertir a signed 32 bits
                 int signed = (int) (raw & 0xFFFFFFFFL);
                 return (double) signed;
             }
             case FLOAT32: {
-                // Los 32 bits representan un IEEE 754 float
                 int bits = (int) (raw & 0xFFFFFFFFL);
                 float f = Float.intBitsToFloat(bits);
                 return (double) f;
             }
             default:
-                LOG.warn("⚠️ tipoDato {} no aplica a PALABRA_DOBLE_MD, se usa raw", tipoDato);
                 return (double) raw;
         }
     }
 
-    /**
-     * Aplica el factor de escala de la plantilla.
-     * Si scalingFactor es null o 0, devuelve el valor sin escalar.
-     */
     private Double escalar(Double valor, Double scalingFactor) {
         if (valor == null) return null;
         if (scalingFactor == null || scalingFactor == 0.0) return valor;
         return valor * scalingFactor;
     }
-    // ... dentro de tu PollingService ...
-
 }

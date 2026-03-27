@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Button, Modal, ModalBody, ModalFooter, ModalHeader } from 'reactstrap';
 import { Translate } from 'react-jhipster';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 import { deleteEntity, getEntity } from './especialidad.reducer';
@@ -39,28 +39,35 @@ export const EspecialidadDeleteDialog = () => {
   };
 
   return (
-    <Modal isOpen toggle={handleClose}>
-      <ModalHeader toggle={handleClose} data-cy="especialidadDeleteDialogHeading">
+    <Dialog open onClose={handleClose} maxWidth="xs" fullWidth>
+      <DialogTitle>
         <Translate contentKey="entity.delete.title">Confirm delete operation</Translate>
-      </ModalHeader>
-      <ModalBody id="appsupervisorApp.especialidad.delete.question">
-        <Translate contentKey="appsupervisorApp.especialidad.delete.question" interpolate={{ id: especialidadEntity.id }}>
-          Are you sure you want to delete this Especialidad?
-        </Translate>
-      </ModalBody>
-      <ModalFooter>
-        <Button color="secondary" onClick={handleClose}>
-          <FontAwesomeIcon icon="ban" />
-          &nbsp;
+      </DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
+          <WarningAmberIcon sx={{ fontSize: 40, color: '#f59e0b' }} />
+          <Typography id="appsupervisorApp.especialidad.delete.question">
+            <Translate contentKey="appsupervisorApp.especialidad.delete.question" interpolate={{ id: especialidadEntity.id }}>
+              Are you sure you want to delete this Especialidad?
+            </Translate>
+          </Typography>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClose} color="inherit">
           <Translate contentKey="entity.action.cancel">Cancel</Translate>
         </Button>
-        <Button id="jhi-confirm-delete-especialidad" data-cy="entityConfirmDeleteButton" color="danger" onClick={confirmDelete}>
-          <FontAwesomeIcon icon="trash" />
-          &nbsp;
+        <Button
+          id="jhi-confirm-delete-especialidad"
+          data-cy="entityConfirmDeleteButton"
+          color="error"
+          variant="contained"
+          onClick={confirmDelete}
+        >
           <Translate contentKey="entity.action.delete">Delete</Translate>
         </Button>
-      </ModalFooter>
-    </Modal>
+      </DialogActions>
+    </Dialog>
   );
 };
 

@@ -35,6 +35,8 @@ public class EquipoDTO implements Serializable {
 
     private ZonedDateTime ultimoHeartbeat;
 
+    private Integer intervaloBase = 10;
+
     private SitioDTO sitio;
 
     private Set<EspecialidadDTO> especialidades = new HashSet<>();
@@ -101,6 +103,14 @@ public class EquipoDTO implements Serializable {
 
     public void setUltimoHeartbeat(ZonedDateTime ultimoHeartbeat) {
         this.ultimoHeartbeat = ultimoHeartbeat;
+    }
+
+    public Integer getIntervaloBase() {
+        return intervaloBase;
+    }
+
+    public void setIntervaloBase(Integer intervaloBase) {
+        this.intervaloBase = intervaloBase;
     }
 
     public SitioDTO getSitio() {

@@ -75,52 +75,68 @@ const subscribeToGeneradoresTopics = (): void => {
 
 // ==================== ENVÍO DE COMANDOS ====================
 export const sendGeneradorCommand = (commandType: string, payload: any): void => {
-  generadoresConnection?.then(() => {
-    if (!generadoresStompClient) return;
+  console.warn('[GENERADORES WS] Intentando enviar comando:', commandType, payload);
 
-    switch (commandType) {
-      case 'CONECTAR_GRUPO':
-        // backend recibe en /app/generadores/connect (ModbusWebSocketController)
-        generadoresStompClient.send('/app/generadores/connect', JSON.stringify(payload), {});
-        break;
+  // Si ya está conectado, enviar inmediatamente
+  if (generadoresStompClient?.connected) {
+    console.warn('[GENERADORES WS] Ya conectado, enviando...');
+    enviarComando(commandType, payload);
+    return;
+  }
 
-      case 'ESCRIBIR_COIL':
-        // backend espera /app/generadores/writeCoil con campos { generatorId, address, booleanValue }
-        // Normalizamos los nombres que vienen del frontend: { grupoId, direccion, valor }
-        generadoresStompClient.send(
-          '/app/generadores/writeCoil',
-          JSON.stringify({
-            generatorId: payload.grupoId || payload.generatorId,
-            address: payload.direccion || payload.address,
-            booleanValue: payload.valor || payload.booleanValue,
-          }),
-          {},
-        );
-        break;
+  console.warn('[GENERADORES WS] No conectado, esperando conexión...');
+  // Si hay una conexión en progreso, esperar
+  generadoresConnection
+    ?.then(() => {
+      console.warn('[GENERADORES WS] Conexión establecida, enviando...');
+      if (generadoresStompClient?.connected) {
+        enviarComando(commandType, payload);
+      }
+    })
+    .catch(() => {
+      console.warn('[GENERADORES WS] Error en conexión');
+    });
+};
 
-      case 'ESCRIBIR_REGISTRO':
-        // backend espera /app/generadores/writeRegister con campos { generatorId, address, value }
-        // Normalizamos los nombres que vienen del frontend: { grupoId, direccion, valor }
-        generadoresStompClient.send(
-          '/app/generadores/writeRegister',
-          JSON.stringify({
-            generatorId: payload.grupoId || payload.generatorId,
-            address: payload.direccion || payload.address,
-            value: payload.valor || payload.value,
-          }),
-          {},
-        );
-        break;
+const enviarComando = (commandType: string, payload: any): void => {
+  if (!generadoresStompClient) return;
 
-      case 'LECTURA_INMEDIATA':
-        generadoresStompClient.send('/app/generadores/leer-ahora', JSON.stringify(payload), {});
-        break;
+  switch (commandType) {
+    case 'CONECTAR_GRUPO':
+      generadoresStompClient.send('/app/generadores/connect', JSON.stringify(payload), {});
+      break;
 
-      default:
-        console.warn('Tipo de comando desconocido:', commandType);
-    }
-    //  console.log('⚡ Comando enviado:', commandType, payload);
-  });
+    case 'ESCRIBIR_COIL':
+      generadoresStompClient.send(
+        '/app/generadores/writeCoil',
+        JSON.stringify({
+          generatorId: payload.grupoId || payload.generatorId,
+          address: payload.direccion || payload.address,
+          booleanValue: payload.valor || payload.booleanValue,
+        }),
+        {},
+      );
+      break;
+
+    case 'ESCRIBIR_REGISTRO':
+      generadoresStompClient.send(
+        '/app/generadores/writeRegister',
+        JSON.stringify({
+          generatorId: payload.grupoId || payload.generatorId,
+          address: payload.direccion || payload.address,
+          value: payload.valor || payload.value,
+        }),
+        {},
+      );
+      break;
+
+    case 'LECTURA_INMEDIATA':
+      generadoresStompClient.send('/app/generadores/leer-ahora', JSON.stringify(payload), {});
+      break;
+
+    default:
+      console.warn('Tipo de comando desconocido:', commandType);
+  }
 };
 
 // ==================== CONEXIÓN WEBSOCKET ====================

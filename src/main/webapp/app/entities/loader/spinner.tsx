@@ -1,9 +1,12 @@
 import React from 'react';
-
-import { ProgressSpinner } from 'primereact/progressspinner';
+import { Box, CircularProgress } from '@mui/material';
 
 const SpinnerCar = () => {
-  return <ProgressSpinner className="flex " style={{ width: '50px', height: '50px' }} animationDuration=".5s" />;
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 2 }}>
+      <CircularProgress size={50} sx={{ color: '#2563eb' }} />
+    </Box>
+  );
 };
 
 export default SpinnerCar;

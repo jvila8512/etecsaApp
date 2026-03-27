@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Button, Col, Row } from 'reactstrap';
 import { Translate, ValidatedField, ValidatedForm, translate } from 'react-jhipster';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Box, Button, Grid, Paper, Typography } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import SaveIcon from '@mui/icons-material/Save';
 
 import { mapIdList } from 'app/shared/util/entity-utils';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
@@ -71,21 +72,17 @@ export const EspecialidadUpdate = () => {
         };
 
   return (
-    <div>
-      <Row className="justify-content-center">
-        <Col md="8">
-          <h2 id="appsupervisorApp.especialidad.home.createOrEditLabel" data-cy="EspecialidadCreateUpdateHeading">
-            <Translate contentKey="appsupervisorApp.especialidad.home.createOrEditLabel">Create or edit a Especialidad</Translate>
-          </h2>
-        </Col>
-      </Row>
-      <Row className="justify-content-center">
-        <Col md="8">
-          {loading ? (
-            <p>Loading...</p>
-          ) : (
-            <ValidatedForm defaultValues={defaultValues()} onSubmit={saveEntity}>
-              {!isNew ? (
+    <Paper sx={{ p: 3 }}>
+      <Typography variant="h5" sx={{ mb: 3, fontWeight: 700 }}>
+        <Translate contentKey="appsupervisorApp.especialidad.home.createOrEditLabel">Create or edit a Especialidad</Translate>
+      </Typography>
+      {loading ? (
+        <Typography>Loading...</Typography>
+      ) : (
+        <ValidatedForm defaultValues={defaultValues()} onSubmit={saveEntity}>
+          <Grid container spacing={2}>
+            {!isNew ? (
+              <Grid size={{ xs: 12 }}>
                 <ValidatedField
                   name="id"
                   required
@@ -94,7 +91,9 @@ export const EspecialidadUpdate = () => {
                   label={translate('global.field.id')}
                   validate={{ required: true }}
                 />
-              ) : null}
+              </Grid>
+            ) : null}
+            <Grid size={{ xs: 12 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.especialidad.nombre')}
                 id="especialidad-nombre"
@@ -105,6 +104,8 @@ export const EspecialidadUpdate = () => {
                   required: { value: true, message: translate('entity.validation.required') },
                 }}
               />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.especialidad.codigo')}
                 id="especialidad-codigo"
@@ -115,6 +116,8 @@ export const EspecialidadUpdate = () => {
                   required: { value: true, message: translate('entity.validation.required') },
                 }}
               />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.especialidad.descripcionTecnica')}
                 id="especialidad-descripcionTecnica"
@@ -122,6 +125,8 @@ export const EspecialidadUpdate = () => {
                 data-cy="descripcionTecnica"
                 type="text"
               />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.especialidad.equipos')}
                 id="especialidad-equipos"
@@ -139,24 +144,35 @@ export const EspecialidadUpdate = () => {
                     ))
                   : null}
               </ValidatedField>
-              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/especialidad" replace color="info">
-                <FontAwesomeIcon icon="arrow-left" />
-                &nbsp;
-                <span className="d-none d-md-inline">
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                <Button
+                  component={Link}
+                  to="/especialidad"
+                  replace
+                  color="info"
+                  startIcon={<ArrowBackIcon />}
+                  data-cy="entityCreateCancelButton"
+                >
                   <Translate contentKey="entity.action.back">Back</Translate>
-                </span>
-              </Button>
-              &nbsp;
-              <Button color="primary" id="save-entity" data-cy="entityCreateSaveButton" type="submit" disabled={updating}>
-                <FontAwesomeIcon icon="save" />
-                &nbsp;
-                <Translate contentKey="entity.action.save">Save</Translate>
-              </Button>
-            </ValidatedForm>
-          )}
-        </Col>
-      </Row>
-    </div>
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  type="submit"
+                  disabled={updating}
+                  startIcon={<SaveIcon />}
+                  data-cy="entityCreateSaveButton"
+                >
+                  <Translate contentKey="entity.action.save">Save</Translate>
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </ValidatedForm>
+      )}
+    </Paper>
   );
 };
 

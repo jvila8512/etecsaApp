@@ -53,6 +53,9 @@ public class Equipo implements Serializable {
     @Column(name = "ultimo_heartbeat")
     private ZonedDateTime ultimoHeartbeat;
 
+    @Column(name = "intervalo_base")
+    private Integer intervaloBase = 10;
+
     @ManyToOne(fetch = FetchType.LAZY)
     private Sitio sitio;
 
@@ -170,6 +173,19 @@ public class Equipo implements Serializable {
 
     public void setUltimoHeartbeat(ZonedDateTime ultimoHeartbeat) {
         this.ultimoHeartbeat = ultimoHeartbeat;
+    }
+
+    public Integer getIntervaloBase() {
+        return this.intervaloBase;
+    }
+
+    public Equipo intervaloBase(Integer intervaloBase) {
+        this.setIntervaloBase(intervaloBase);
+        return this;
+    }
+
+    public void setIntervaloBase(Integer intervaloBase) {
+        this.intervaloBase = intervaloBase;
     }
 
     public Sitio getSitio() {

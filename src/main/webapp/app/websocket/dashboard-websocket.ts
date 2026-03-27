@@ -4,33 +4,47 @@ import { Observable } from 'rxjs';
 import { Storage } from 'react-jhipster';
 
 /**
- * Conexión WebSocket al tópico /topic/dashboard.
- * El backend envía cada 5 segundos la lista de equipos con su estado y variables.
+ * Conexión WebSocket para el dashboard.
+ * Suscribe a dos tópicos:
+ * - /topic/dashboard/completo: Todos los equipos cada 5s (para la vista)
+ * - /topic/dashboard/actualizaciones: Variables según intervalo, cada 1s (para alarmas)
  */
 let stompClient: any = null;
-let subscriber: any = null;
+let subscriberCompleto: any = null;
+let subscriberActualizaciones: any = null;
 let connection: Promise<any>;
 let connectedPromise: ((v: any) => void) | null = null;
-let listener: Observable<any>;
-let listenerObserver: any;
+let listenerCompleto: Observable<any>;
+let listenerActualizaciones: Observable<any>;
+let listenerCompletoObserver: any;
+let listenerActualizacionesObserver: any;
 let alreadyConnectedOnce = false;
 
 const createConnection = (): Promise<any> => new Promise(resolve => (connectedPromise = resolve));
-const createListener = (): Observable<any> => new Observable(observer => (listenerObserver = observer));
+const createListenerCompleto = (): Observable<any> => new Observable(observer => (listenerCompletoObserver = observer));
+const createListenerActualizaciones = (): Observable<any> => new Observable(observer => (listenerActualizacionesObserver = observer));
 
 const subscribeToDashboard = (): void => {
   connection.then(() => {
     if (!stompClient) return;
-    subscriber = stompClient.subscribe('/topic/dashboard', (data: any) => {
-      listenerObserver.next(JSON.parse(data.body));
+
+    subscriberCompleto = stompClient.subscribe('/topic/dashboard/completo', (data: any) => {
+      listenerCompletoObserver?.next(JSON.parse(data.body));
+    });
+
+    subscriberActualizaciones = stompClient.subscribe('/topic/dashboard/actualizaciones', (data: any) => {
+      listenerActualizacionesObserver?.next(JSON.parse(data.body));
     });
   });
 };
 
 export const connectDashboard = (): void => {
-  if (connectedPromise !== null || alreadyConnectedOnce) return;
+  if (alreadyConnectedOnce) return;
+  alreadyConnectedOnce = true;
+
+  listenerCompleto = createListenerCompleto();
+  listenerActualizaciones = createListenerActualizaciones();
   connection = createConnection();
-  listener = createListener();
 
   const loc = window.location;
   const baseElement = document.querySelector('base');
@@ -60,10 +74,29 @@ export const connectDashboard = (): void => {
 
 export const disconnectDashboard = (): void => {
   if (stompClient) {
-    if (stompClient.connected) stompClient.disconnect();
+    if (stompClient.connected) {
+      if (subscriberCompleto) subscriberCompleto.unsubscribe();
+      if (subscriberActualizaciones) subscriberActualizaciones.unsubscribe();
+      stompClient.disconnect();
+    }
     stompClient = null;
   }
   alreadyConnectedOnce = false;
 };
 
-export const receiveDashboard = (): Observable<any> => listener;
+/**
+ * Dashboard completo: todos los equipos cada 5 segundos.
+ * Usar para la vista del dashboard.
+ */
+export const receiveDashboardCompleto = (): Observable<any> => listenerCompleto;
+
+/**
+ * Actualizaciones rápidas: variables según intervalo cada 1 segundo.
+ * Usar para detección de alarmas.
+ */
+export const receiveDashboardActualizaciones = (): Observable<any> => listenerActualizaciones;
+
+/**
+ * @deprecated Usar receiveDashboardCompleto() o receiveDashboardActualizaciones()
+ */
+export const receiveDashboard = (): Observable<any> => listenerCompleto;

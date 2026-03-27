@@ -1,5 +1,6 @@
 package com.etecsa.domain;
 
+import com.etecsa.domain.enumeration.Severidad;
 import com.etecsa.domain.enumeration.TipoDato;
 import com.etecsa.domain.enumeration.TipoRegistro;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -62,6 +63,10 @@ public class EventoEquipo implements Serializable {
 
     @Column(name = "umbral_alerta")
     private Double umbralAlerta;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "severidad_alerta")
+    private Severidad severidadAlerta;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnoreProperties(value = { "sitio", "especialidades" }, allowSetters = true)
@@ -214,6 +219,19 @@ public class EventoEquipo implements Serializable {
 
     public void setUmbralAlerta(Double umbralAlerta) {
         this.umbralAlerta = umbralAlerta;
+    }
+
+    public Severidad getSeveridadAlerta() {
+        return this.severidadAlerta;
+    }
+
+    public EventoEquipo severidadAlerta(Severidad severidadAlerta) {
+        this.setSeveridadAlerta(severidadAlerta);
+        return this;
+    }
+
+    public void setSeveridadAlerta(Severidad severidadAlerta) {
+        this.severidadAlerta = severidadAlerta;
     }
 
     public Equipo getEquipo() {

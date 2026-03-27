@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import {
@@ -12,32 +12,58 @@ import {
   ValidatedForm,
 } from 'react-jhipster';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Row } from 'reactstrap';
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Checkbox,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Toolbar,
+  Typography,
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
+import ViewColumnIcon from '@mui/icons-material/ViewColumn';
+import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { APP_DATE_FORMAT } from 'app/config/constants';
 import { ASC, DESC, ITEMS_PER_PAGE, SORT } from 'app/shared/util/pagination.constants';
 import { overridePaginationStateWithQueryParams } from 'app/shared/util/entity-utils';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 
-import { Button } from 'primereact/button';
-import { InputText } from 'primereact/inputtext';
-import { IconField } from 'primereact/iconfield';
-import { InputIcon } from 'primereact/inputicon';
-import { Dialog } from 'primereact/dialog';
-import { DataTable, DataTableFilterMeta } from 'primereact/datatable';
-import { Column } from 'primereact/column';
-import { Toolbar } from 'primereact/toolbar';
-import { FilterMatchMode, FilterOperator } from 'primereact/api';
-
 import Spinner from '../loader/spinner';
-import { getEntities, createEntity, updateEntity, deleteEntity, reset } from './sitio.reducer';
+import { getEntities, createEntity, updateEntity, deleteEntity } from './sitio.reducer';
 import { ISitio } from 'app/shared/model/sitio.model';
+
+const ALL_COLUMNS = [
+  { key: 'id', label: 'Id', default: true },
+  { key: 'nombre', label: 'Nombre', default: true },
+  { key: 'codigo', label: 'Código', default: true },
+  { key: 'ubicacion', label: 'Ubicación', default: false },
+  { key: 'fechaRegistro', label: 'Fecha Registro', default: false },
+];
 
 export const Sitio = () => {
   const dispatch = useAppDispatch();
   const pageLocation = useLocation();
   const navigate = useNavigate();
-
-  // ─── Redux state ──────────────────────────────────────────────────────────────
 
   const sitioList = useAppSelector(state => state.sitio.entities);
   const loading = useAppSelector(state => state.sitio.loading);
@@ -45,30 +71,42 @@ export const Sitio = () => {
   const updateSuccess = useAppSelector(state => state.sitio.updateSuccess);
   const totalItems = useAppSelector(state => state.sitio.totalItems);
 
-  // ─── Pagination state ─────────────────────────────────────────────────────────
-
   const [paginationState, setPaginationState] = useState(
     overridePaginationStateWithQueryParams(getPaginationState(pageLocation, ITEMS_PER_PAGE, 'id'), pageLocation.search),
   );
 
-  // ─── Local state ──────────────────────────────────────────────────────────────
-
-  const dt = useRef(null);
-  const [isNew, setIsNew] = useState(true);
-  const [sitio, setSitio] = useState<ISitio | null>(null);
-  const [selectedSitio, setSelectedSitio] = useState<ISitio | null>(null);
   const [sitioDialog, setSitioDialog] = useState(false);
   const [deleteSitioDialog, setDeleteSitioDialog] = useState(false);
   const [globalFilter, setGlobalFilterValue] = useState('');
+  const [columnMenuAnchor, setColumnMenuAnchor] = useState<null | HTMLElement>(null);
+  const [selectedSitio, setSelectedSitio] = useState<ISitio | null>(null);
+  const [formKey, setFormKey] = useState(0);
 
-  const [filters, setFilters] = useState<DataTableFilterMeta>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    nombre: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-    codigo: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
-    ubicacion: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.STARTS_WITH }] },
+  const [formValues, setFormValues] = useState({
+    nombre: '',
+    codigo: '',
+    ubicacion: '',
+    fechaRegistro: '',
   });
 
-  // ─── Effects ──────────────────────────────────────────────────────────────────
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
+    const saved = localStorage.getItem('sitio-columns');
+    if (saved) return JSON.parse(saved);
+    return ALL_COLUMNS.filter(c => c.default).map(c => c.key);
+  });
+
+  const saveColumns = (cols: string[]) => {
+    setVisibleColumns(cols);
+    localStorage.setItem('sitio-columns', JSON.stringify(cols));
+  };
+
+  const toggleColumn = (key: string) => {
+    if (visibleColumns.includes(key)) {
+      if (visibleColumns.length > 1) saveColumns(visibleColumns.filter(c => c !== key));
+    } else {
+      saveColumns([...visibleColumns, key]);
+    }
+  };
 
   const getAllEntities = () => {
     dispatch(
@@ -107,18 +145,13 @@ export const Sitio = () => {
     }
   }, [pageLocation.search]);
 
-  // Cerrar dialog al guardar exitosamente — igual que el ejemplo
   useEffect(() => {
-    if (updateSuccess && isNew) {
+    if (updateSuccess) {
       setSitioDialog(false);
       setSelectedSitio(null);
-    }
-    if (updateSuccess && !isNew) {
-      setSitioDialog(false);
+      setFormValues({ nombre: '', codigo: '', ubicacion: '', fechaRegistro: '' });
     }
   }, [updateSuccess]);
-
-  // ─── Sorting ──────────────────────────────────────────────────────────────────
 
   const sort = (field: string) => {
     setPaginationState({
@@ -128,59 +161,63 @@ export const Sitio = () => {
     });
   };
 
-  // ─── Pagination ───────────────────────────────────────────────────────────────
-
   const handlePagination = (currentPage: number) => setPaginationState({ ...paginationState, activePage: currentPage });
-
   const handleSyncList = () => sortEntities();
 
-  // ─── Global filter ────────────────────────────────────────────────────────────
-
   const onGlobalFilterChange = e => {
-    const value = e.target.value;
-    const _filters = { ...filters };
-    (_filters as any)['global'].value = value;
-    setFilters(_filters);
-    setGlobalFilterValue(value);
+    setGlobalFilterValue(e.target.value);
   };
 
-  // ─── CRUD ─────────────────────────────────────────────────────────────────────
+  const filteredList = sitioList?.filter(
+    s =>
+      !globalFilter ||
+      s.nombre?.toLowerCase().includes(globalFilter.toLowerCase()) ||
+      s.codigo?.toLowerCase().includes(globalFilter.toLowerCase()) ||
+      s.ubicacion?.toLowerCase().includes(globalFilter.toLowerCase()),
+  );
 
   const verDialogNuevo = () => {
-    setSitio(null);
-    setIsNew(true);
+    setSelectedSitio(null);
+    setFormValues({ nombre: '', codigo: '', ubicacion: '', fechaRegistro: '' });
+    setFormKey(prev => prev + 1);
     setSitioDialog(true);
   };
 
   const actualizar = (rowData: ISitio) => {
-    setSitio({ ...rowData });
-    setIsNew(false);
+    setSelectedSitio(rowData);
+    setFormValues({
+      nombre: rowData.nombre || '',
+      codigo: rowData.codigo || '',
+      ubicacion: rowData.ubicacion || '',
+      fechaRegistro: rowData.fechaRegistro ? dayjs(rowData.fechaRegistro).format('YYYY-MM-DDTHH:mm') : '',
+    });
+    setFormKey(prev => prev + 1);
     setSitioDialog(true);
   };
 
   const hideDialogNuevo = () => {
     setSitioDialog(false);
+    setSelectedSitio(null);
+    setFormValues({ nombre: '', codigo: '', ubicacion: '', fechaRegistro: '' });
   };
 
-  const saveEntity = values => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormValues(prev => ({ ...prev, [name]: value }));
+  };
+
+  const guardar = (values: any) => {
     const entity: ISitio = {
       ...values,
       fechaRegistro: values.fechaRegistro ? dayjs(values.fechaRegistro) : undefined,
     };
-    if (isNew) {
-      dispatch(createEntity(entity));
-    } else {
+    if (selectedSitio?.id) {
+      entity.id = selectedSitio.id;
       dispatch(updateEntity(entity));
+    } else {
+      dispatch(createEntity(entity));
     }
   };
-
-  const defaultValues = () =>
-    isNew
-      ? {}
-      : {
-          ...sitio,
-          fechaRegistro: sitio?.fechaRegistro ? dayjs(sitio.fechaRegistro).format('YYYY-MM-DDTHH:mm') : '',
-        };
 
   const verEliminar = (rowData: ISitio) => {
     setSelectedSitio(rowData);
@@ -199,207 +236,204 @@ export const Sitio = () => {
     setSelectedSitio(null);
   };
 
-  // ─── Toolbar ──────────────────────────────────────────────────────────────────
-
-  const leftToolbarTemplate = () => (
-    <React.Fragment>
-      <div className="my-2">
-        <Button label="Actualizar" icon="pi pi-refresh" className="p-button-secondary mr-2" onClick={handleSyncList} disabled={loading} />
-      </div>
-    </React.Fragment>
-  );
-
-  const rightToolbarTemplate = () => (
-    <React.Fragment>
-      {/* Azul = p-button-info, igual que el ejemplo */}
-      <Button label="Nuevo Sitio" icon="pi pi-plus" className="p-button-info" onClick={verDialogNuevo} />
-    </React.Fragment>
-  );
-
-  // ─── Table header — buscar a la derecha ───────────────────────────────────────
-
-  const header = (
-    <div className="d-flex flex-wrap gap-2 align-items-center justify-content-between">
-      <h4 className="m-0">Sitios</h4>
-      <IconField iconPosition="left">
-        <InputIcon className="pi pi-search" />
-        <InputText type="search" onInput={onGlobalFilterChange} placeholder="Buscar..." />
-      </IconField>
-    </div>
-  );
-
-  const actionBodyTemplate = (rowData: ISitio) => (
-    <>
-      <Button icon="pi pi-trash" rounded className="p-button-danger ml-2 mb-1" onClick={() => verEliminar(rowData)} />
-      <Button icon="pi pi-pencil" className="p-button-rounded p-button-warning ml-2 mb-1" onClick={() => actualizar(rowData)} />
-      <Button icon="pi pi-times" rounded text raised severity="danger" aria-label="Cancel" />
-    </>
-  );
-
-  // ─── Fecha column ─────────────────────────────────────────────────────────────
-
-  const fechaBodyTemplate = (rowData: ISitio) =>
-    rowData.fechaRegistro ? <TextFormat type="date" value={rowData.fechaRegistro as unknown as string} format={APP_DATE_FORMAT} /> : null;
-
-  // ─── Delete footer ────────────────────────────────────────────────────────────
-
-  const deleteDialogFooter = (
-    <>
-      <Button label="No" icon="pi pi-times" className="p-button-text" onClick={hideDeleteDialog} />
-      <Button label="Sí" icon="pi pi-check" className="p-button-text" onClick={deleteSitio} />
-    </>
-  );
-
-  // ─── Render ───────────────────────────────────────────────────────────────────
+  const showColumn = (key: string) => visibleColumns.includes(key);
 
   return (
-    <div className="grid crud-demo mt-3 mb-4">
-      <div className="col-12">
-        <div className="card">
-          <Toolbar className="mb-4" left={leftToolbarTemplate} right={rightToolbarTemplate} />
+    <Paper sx={{ p: 3 }}>
+      <Toolbar sx={{ justifyContent: 'space-between', mb: 2, px: 0 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700 }}>
+          Sitios
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button variant="outlined" startIcon={<ViewColumnIcon />} onClick={e => setColumnMenuAnchor(e.currentTarget)}>
+            Columnas
+          </Button>
+          <Menu anchorEl={columnMenuAnchor} open={Boolean(columnMenuAnchor)} onClose={() => setColumnMenuAnchor(null)}>
+            {ALL_COLUMNS.map(col => (
+              <MenuItem key={col.key} onClick={() => toggleColumn(col.key)}>
+                <ListItemIcon>
+                  <Checkbox checked={visibleColumns.includes(col.key)} size="small" />
+                </ListItemIcon>
+                <ListItemText>{col.label}</ListItemText>
+              </MenuItem>
+            ))}
+          </Menu>
+          <Button variant="outlined" startIcon={<RefreshIcon />} onClick={handleSyncList} disabled={loading}>
+            Actualizar
+          </Button>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={verDialogNuevo}>
+            Nuevo Sitio
+          </Button>
+        </Box>
+      </Toolbar>
 
-          <DataTable
-            ref={dt}
-            value={sitioList}
-            selection={selectedSitio}
-            onSelectionChange={e => setSelectedSitio(e.value as ISitio)}
-            dataKey="id"
-            paginator={false}
-            className="datatable-responsive"
-            globalFilter={globalFilter}
-            loading={loading}
-            emptyMessage="No hay Sitios..."
-            header={header}
-            onSort={e => sort(e.sortField)}
-            sortField={paginationState.sort}
-            sortOrder={paginationState.order === ASC ? 1 : -1}
-            showGridlines
-          >
-            <Column field="id" header="Id" hidden />
-            <Column field="nombre" header="Nombre" sortable headerStyle={{ minWidth: '15rem' }} />
-            <Column field="codigo" header="Código" sortable headerStyle={{ minWidth: '10rem' }} />
-            <Column field="ubicacion" header="Ubicación" sortable headerStyle={{ minWidth: '15rem' }} />
-            <Column field="fechaRegistro" header="Fecha Registro" body={fechaBodyTemplate} sortable headerStyle={{ minWidth: '12rem' }} />
-            <Column body={actionBodyTemplate} headerStyle={{ minWidth: '8rem' }} />
-          </DataTable>
+      <TextField
+        size="small"
+        placeholder="Buscar..."
+        value={globalFilter}
+        onChange={onGlobalFilterChange}
+        InputProps={{
+          startAdornment: <SearchIcon sx={{ color: 'text.secondary', mr: 1 }} />,
+        }}
+        sx={{ mb: 2, width: 300 }}
+      />
 
-          {/* ── Paginador server-side (JHipster) ── */}
-          {totalItems && sitioList && sitioList.length > 0 ? (
-            <div className="mt-3">
-              <div className="justify-content-center d-flex">
-                <JhiItemCount
-                  page={paginationState.activePage}
-                  total={totalItems}
-                  itemsPerPage={paginationState.itemsPerPage}
-                  i18nEnabled
+      <TableContainer sx={{ overflowX: 'auto' }}>
+        <Table sx={{ minWidth: 600 }}>
+          <TableHead>
+            <TableRow sx={{ bgcolor: '#f8fafc' }}>
+              {showColumn('id') && <TableCell sx={{ fontWeight: 600 }}>Id</TableCell>}
+              {showColumn('nombre') && (
+                <TableCell sx={{ fontWeight: 600, cursor: 'pointer' }} onClick={() => sort('nombre')}>
+                  Nombre
+                </TableCell>
+              )}
+              {showColumn('codigo') && (
+                <TableCell sx={{ fontWeight: 600, cursor: 'pointer' }} onClick={() => sort('codigo')}>
+                  Código
+                </TableCell>
+              )}
+              {showColumn('ubicacion') && (
+                <TableCell sx={{ fontWeight: 600, cursor: 'pointer' }} onClick={() => sort('ubicacion')}>
+                  Ubicación
+                </TableCell>
+              )}
+              {showColumn('fechaRegistro') && (
+                <TableCell sx={{ fontWeight: 600, cursor: 'pointer' }} onClick={() => sort('fechaRegistro')}>
+                  Fecha Registro
+                </TableCell>
+              )}
+              <TableCell sx={{ fontWeight: 600 }}>Acciones</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredList?.map((s: ISitio) => (
+              <TableRow key={s.id} hover>
+                {showColumn('id') && <TableCell>{s.id}</TableCell>}
+                {showColumn('nombre') && <TableCell>{s.nombre}</TableCell>}
+                {showColumn('codigo') && <TableCell>{s.codigo}</TableCell>}
+                {showColumn('ubicacion') && <TableCell>{s.ubicacion}</TableCell>}
+                {showColumn('fechaRegistro') && (
+                  <TableCell>
+                    {s.fechaRegistro ? (
+                      <TextFormat type="date" value={s.fechaRegistro as unknown as string} format={APP_DATE_FORMAT} />
+                    ) : null}
+                  </TableCell>
+                )}
+                <TableCell>
+                  <Box sx={{ display: 'flex', gap: 0.5 }}>
+                    <IconButton size="small" color="warning" onClick={() => actualizar(s)}>
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" color="error" onClick={() => verEliminar(s)}>
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {totalItems && sitioList && sitioList.length > 0 ? (
+        <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+          <JhiPagination
+            activePage={paginationState.activePage}
+            onSelect={handlePagination}
+            maxButtons={5}
+            itemsPerPage={paginationState.itemsPerPage}
+            totalItems={totalItems}
+          />
+        </Box>
+      ) : null}
+
+      <Dialog open={sitioDialog} onClose={() => {}} maxWidth="sm" fullWidth>
+        <DialogTitle>{selectedSitio ? 'Editar Sitio' : 'Nuevo Sitio'}</DialogTitle>
+        <DialogContent>
+          {loading ? (
+            <Spinner />
+          ) : (
+            <form key={formKey}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                <TextField
+                  label={translate('appsupervisorApp.sitio.nombre')}
+                  id="sitio-nombre"
+                  name="nombre"
+                  value={formValues.nombre}
+                  onChange={handleInputChange}
+                  fullWidth
+                  required
+                  error={!formValues.nombre}
+                  helperText={!formValues.nombre ? 'Requerido' : ''}
                 />
-              </div>
-              <div className="justify-content-center d-flex">
-                <JhiPagination
-                  activePage={paginationState.activePage}
-                  onSelect={handlePagination}
-                  maxButtons={5}
-                  itemsPerPage={paginationState.itemsPerPage}
-                  totalItems={totalItems}
+                <TextField
+                  label={translate('appsupervisorApp.sitio.codigo')}
+                  id="sitio-codigo"
+                  name="codigo"
+                  value={formValues.codigo}
+                  onChange={handleInputChange}
+                  fullWidth
+                  required
+                  error={!formValues.codigo}
+                  helperText={!formValues.codigo ? 'Requerido' : ''}
                 />
-              </div>
-            </div>
-          ) : null}
-
-          {/* ── Dialog Crear / Editar — igual al patrón del ejemplo ── */}
-          <Dialog
-            visible={sitioDialog}
-            style={{ width: '450px' }}
-            header={isNew ? 'Nuevo Sitio' : 'Editar Sitio'}
-            modal
-            className="p-fluid"
-            onHide={hideDialogNuevo}
-          >
-            <Row className="justify-content-center">
-              {loading ? (
-                <Spinner />
-              ) : (
-                <ValidatedForm defaultValues={defaultValues()} onSubmit={saveEntity}>
-                  {!isNew && (
-                    <ValidatedField
-                      name="id"
-                      required
-                      readOnly
-                      hidden
-                      id="sitio-id"
-                      label={translate('global.field.id')}
-                      validate={{ required: true }}
-                    />
-                  )}
-                  <ValidatedField
-                    label={translate('appsupervisorApp.sitio.nombre')}
-                    id="sitio-nombre"
-                    name="nombre"
-                    data-cy="nombre"
-                    type="text"
-                    validate={{
-                      required: { value: true, message: translate('entity.validation.required') },
-                    }}
-                  />
-                  <ValidatedField
-                    label={translate('appsupervisorApp.sitio.codigo')}
-                    id="sitio-codigo"
-                    name="codigo"
-                    data-cy="codigo"
-                    type="text"
-                    validate={{
-                      required: { value: true, message: translate('entity.validation.required') },
-                    }}
-                  />
-                  <ValidatedField
-                    label={translate('appsupervisorApp.sitio.ubicacion')}
-                    id="sitio-ubicacion"
-                    name="ubicacion"
-                    data-cy="ubicacion"
-                    type="text"
-                  />
-                  <ValidatedField
-                    label={translate('appsupervisorApp.sitio.fechaRegistro')}
-                    id="sitio-fechaRegistro"
-                    name="fechaRegistro"
-                    data-cy="fechaRegistro"
-                    type="datetime-local"
-                    placeholder="YYYY-MM-DD HH:mm"
-                  />
-                  &nbsp;
-                  <Button color="primary" id="save-entity" data-cy="entityCreateSaveButton" type="submit" disabled={updating}>
-                    <span className="m-auto">
-                      <FontAwesomeIcon icon="save" />
-                      &nbsp;
-                      <Translate contentKey="entity.action.save">Guardar</Translate>
-                    </span>
+                <TextField
+                  label={translate('appsupervisorApp.sitio.ubicacion')}
+                  id="sitio-ubicacion"
+                  name="ubicacion"
+                  value={formValues.ubicacion}
+                  onChange={handleInputChange}
+                  fullWidth
+                />
+                <TextField
+                  label={translate('appsupervisorApp.sitio.fechaRegistro')}
+                  id="sitio-fechaRegistro"
+                  name="fechaRegistro"
+                  type="datetime-local"
+                  value={formValues.fechaRegistro}
+                  onChange={handleInputChange}
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                />
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+                  <Button onClick={hideDialogNuevo}>Cancelar</Button>
+                  <Button
+                    variant="contained"
+                    onClick={() => guardar(formValues)}
+                    disabled={updating || !formValues.nombre || !formValues.codigo}
+                  >
+                    <FontAwesomeIcon icon="save" />
+                    &nbsp;
+                    <Translate contentKey="entity.action.save">Guardar</Translate>
                   </Button>
-                </ValidatedForm>
-              )}
-            </Row>
-          </Dialog>
+                </Box>
+              </Box>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
-          {/* ── Dialog Confirmar Eliminación ── */}
-          <Dialog
-            visible={deleteSitioDialog}
-            style={{ width: '450px' }}
-            header="Confirmar"
-            modal
-            footer={deleteDialogFooter}
-            onHide={hideDeleteDialog}
-          >
-            <div className="flex align-items-center justify-content-center">
-              <i className="pi pi-exclamation-triangle mr-3" style={{ fontSize: '2rem' }} />
-              {selectedSitio && (
-                <span>
-                  ¿Seguro que quiere eliminar el Sitio: <b>{selectedSitio.nombre}</b>?
-                </span>
-              )}
-            </div>
-          </Dialog>
-        </div>
-      </div>
-    </div>
+      <Dialog open={deleteSitioDialog} onClose={hideDeleteDialog} maxWidth="xs" fullWidth>
+        <DialogTitle>Confirmar</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, py: 1 }}>
+            <WarningAmberIcon sx={{ fontSize: 40, color: '#f59e0b' }} />
+            {selectedSitio && (
+              <Typography>
+                ¿Seguro que quiere eliminar el Sitio: <strong>{selectedSitio.nombre}</strong>?
+              </Typography>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={hideDeleteDialog}>No</Button>
+          <Button onClick={deleteSitio} color="error" variant="contained">
+            Sí
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Paper>
   );
 };
 

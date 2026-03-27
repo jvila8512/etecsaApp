@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Button, Col, Row } from 'reactstrap';
 import { Translate } from 'react-jhipster';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Box, Button, Paper, Typography } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import EditIcon from '@mui/icons-material/Edit';
 
 import { useAppDispatch, useAppSelector } from 'app/config/store';
 
@@ -19,40 +20,40 @@ export const EspecialidadDetail = () => {
 
   const especialidadEntity = useAppSelector(state => state.especialidad.entity);
   return (
-    <Row>
-      <Col md="8">
-        <h2 data-cy="especialidadDetailsHeading">
-          <Translate contentKey="appsupervisorApp.especialidad.detail.title">Especialidad</Translate>
-        </h2>
-        <dl className="jh-entity-details">
-          <dt>
-            <span id="id">
-              <Translate contentKey="global.field.id">ID</Translate>
-            </span>
-          </dt>
-          <dd>{especialidadEntity.id}</dd>
-          <dt>
-            <span id="nombre">
-              <Translate contentKey="appsupervisorApp.especialidad.nombre">Nombre</Translate>
-            </span>
-          </dt>
-          <dd>{especialidadEntity.nombre}</dd>
-          <dt>
-            <span id="codigo">
-              <Translate contentKey="appsupervisorApp.especialidad.codigo">Codigo</Translate>
-            </span>
-          </dt>
-          <dd>{especialidadEntity.codigo}</dd>
-          <dt>
-            <span id="descripcionTecnica">
-              <Translate contentKey="appsupervisorApp.especialidad.descripcionTecnica">Descripcion Tecnica</Translate>
-            </span>
-          </dt>
-          <dd>{especialidadEntity.descripcionTecnica}</dd>
-          <dt>
-            <Translate contentKey="appsupervisorApp.especialidad.equipos">Equipos</Translate>
-          </dt>
-          <dd>
+    <Paper sx={{ p: 3 }}>
+      <Typography variant="h5" sx={{ mb: 2, fontWeight: 700 }}>
+        <Translate contentKey="appsupervisorApp.especialidad.detail.title">Especialidad</Translate>
+      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="global.field.id">ID</Translate>:
+          </Typography>
+          <Typography>{especialidadEntity.id}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.especialidad.nombre">Nombre</Translate>:
+          </Typography>
+          <Typography>{especialidadEntity.nombre}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.especialidad.codigo">Codigo</Translate>:
+          </Typography>
+          <Typography>{especialidadEntity.codigo}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.especialidad.descripcionTecnica">Descripcion Tecnica</Translate>:
+          </Typography>
+          <Typography>{especialidadEntity.descripcionTecnica}</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+            <Translate contentKey="appsupervisorApp.especialidad.equipos">Equipos</Translate>:
+          </Typography>
+          <Typography>
             {especialidadEntity.equipos
               ? especialidadEntity.equipos.map((val, i) => (
                   <span key={val.id}>
@@ -61,23 +62,18 @@ export const EspecialidadDetail = () => {
                   </span>
                 ))
               : null}
-          </dd>
-        </dl>
-        <Button tag={Link} to="/especialidad" replace color="info" data-cy="entityDetailsBackButton">
-          <FontAwesomeIcon icon="arrow-left" />{' '}
-          <span className="d-none d-md-inline">
-            <Translate contentKey="entity.action.back">Back</Translate>
-          </span>
+          </Typography>
+        </Box>
+      </Box>
+      <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+        <Button component={Link} to="/especialidad" replace color="info" startIcon={<ArrowBackIcon />} data-cy="entityDetailsBackButton">
+          <Translate contentKey="entity.action.back">Back</Translate>
         </Button>
-        &nbsp;
-        <Button tag={Link} to={`/especialidad/${especialidadEntity.id}/edit`} replace color="primary">
-          <FontAwesomeIcon icon="pencil-alt" />{' '}
-          <span className="d-none d-md-inline">
-            <Translate contentKey="entity.action.edit">Edit</Translate>
-          </span>
+        <Button component={Link} to={`/especialidad/${especialidadEntity.id}/edit`} replace variant="contained" startIcon={<EditIcon />}>
+          <Translate contentKey="entity.action.edit">Edit</Translate>
         </Button>
-      </Col>
-    </Row>
+      </Box>
+    </Paper>
   );
 };
 

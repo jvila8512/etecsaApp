@@ -5,11 +5,13 @@ import com.etecsa.service.AlarmaQueryService;
 import com.etecsa.service.AlarmaService;
 import com.etecsa.service.criteria.AlarmaCriteria;
 import com.etecsa.service.dto.AlarmaDTO;
+import com.etecsa.service.dto.AlarmaDeteccionDTO;
 import com.etecsa.web.rest.errors.BadRequestAlertException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.Principal;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -197,5 +199,71 @@ public class AlarmaResource {
         return ResponseEntity.noContent()
             .headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString()))
             .build();
+    }
+
+    /**
+     * {@code POST  /alarmas/procesar-deteccion} : Procesa una detección de alarma.
+     * Endpoint inteligente que:
+     * - Si esAlarma=true Y no existe → crea nueva ACTIVA
+     * - Si esAlarma=true Y ya existe → no hace nada
+     * - Si esAlarma=false Y existe → FINALIZA
+     * - Si esAlarma=false Y no existe → no hace nada
+     *
+     * @param deteccion los datos de la detección.
+     * @return la nueva alarma creada, o 204 si no se creó/modificó nada.
+     */
+    @PostMapping("/procesar-deteccion")
+    public ResponseEntity<AlarmaDTO> procesarDeteccion(@RequestBody AlarmaDeteccionDTO deteccion) {
+        LOG.debug("REST request to procesar deteccion: {}", deteccion);
+        AlarmaDTO result = alarmaService.procesarDeteccion(deteccion);
+
+        if (result != null) {
+            return ResponseEntity.ok(result);
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * {@code POST  /alarmas/{id}/reconocer} : Reconoce una alarma (ACTIVA → RECONOCIDA).
+     *
+     * @param id el id de la alarma.
+     * @param principal el usuario autenticado.
+     * @return la alarma actualizada.
+     */
+    @PostMapping("/{id}/reconocer")
+    public ResponseEntity<AlarmaDTO> reconocerAlarma(@PathVariable("id") Long id, Principal principal) {
+        LOG.debug("REST request to reconocer alarma: {}", id);
+        String username = principal != null ? principal.getName() : null;
+        Optional<AlarmaDTO> result = alarmaService.reconocerAlarma(id, username);
+
+        return ResponseUtil.wrapOrNotFound(result);
+    }
+
+    /**
+     * {@code POST  /alarmas/{id}/finalizar} : Finaliza una alarma manualmente.
+     *
+     * @param id el id de la alarma.
+     * @return la alarma actualizada.
+     */
+    @PostMapping("/{id}/finalizar")
+    public ResponseEntity<AlarmaDTO> finalizarAlarma(@PathVariable("id") Long id) {
+        LOG.debug("REST request to finalizar alarma: {}", id);
+        Optional<AlarmaDTO> result = alarmaService.finalizarAlarma(id);
+
+        return ResponseUtil.wrapOrNotFound(result);
+    }
+
+    /**
+     * {@code GET  /alarmas/activas/evento/{eventoId}} : Obtiene alarmas no finalizadas para un evento.
+     *
+     * @param eventoId el id del evento.
+     * @return lista de alarmas activas/reconocidas.
+     */
+    @GetMapping("/activas/evento/{eventoId}")
+    public ResponseEntity<List<AlarmaDTO>> getAlarmasActivasParaEvento(@PathVariable("eventoId") Long eventoId) {
+        LOG.debug("REST request to get alarmas activas para evento: {}", eventoId);
+        List<AlarmaDTO> result = alarmaService.obtenerAlarmasActivasParaEvento(eventoId);
+
+        return ResponseEntity.ok(result);
     }
 }

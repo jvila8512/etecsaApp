@@ -73,10 +73,14 @@
     "browser-sync": "3.0.4"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@eslint/js": "9.26.0",
     "@fortawesome/fontawesome-svg-core": "6.7.2",
     "@fortawesome/free-solid-svg-icons": "6.7.2",
     "@fortawesome/react-fontawesome": "0.2.2",
+    "@mui/icons-material": "^7.3.9",
+    "@mui/material": "^7.3.9",
     "@reduxjs/toolkit": "2.8.0",
     "axios": "1.9.0",
     "bootstrap": "5.3.6",
@@ -99,6 +103,7 @@
     "react-toastify": "11.0.5",
     "react-transition-group": "^4.4.5",
     "reactstrap": "9.2.3",
+    "recharts": "^3.8.0",
     "redux": "5.0.1",
     "rxjs": "7.8.2",
     "sockjs-client": "1.6.1",

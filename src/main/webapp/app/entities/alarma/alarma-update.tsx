@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Button, Col, Row } from 'reactstrap';
 import { Translate, ValidatedField, ValidatedForm, translate } from 'react-jhipster';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Box, Button, Grid, Paper, Typography } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import SaveIcon from '@mui/icons-material/Save';
 
 import { convertDateTimeFromServer, convertDateTimeToServer, displayDefaultDateTime } from 'app/shared/util/date-utils';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
@@ -89,21 +90,17 @@ export const AlarmaUpdate = () => {
         };
 
   return (
-    <div>
-      <Row className="justify-content-center">
-        <Col md="8">
-          <h2 id="appsupervisorApp.alarma.home.createOrEditLabel" data-cy="AlarmaCreateUpdateHeading">
-            <Translate contentKey="appsupervisorApp.alarma.home.createOrEditLabel">Create or edit a Alarma</Translate>
-          </h2>
-        </Col>
-      </Row>
-      <Row className="justify-content-center">
-        <Col md="8">
-          {loading ? (
-            <p>Loading...</p>
-          ) : (
-            <ValidatedForm defaultValues={defaultValues()} onSubmit={saveEntity}>
-              {!isNew ? (
+    <Paper sx={{ p: 3 }}>
+      <Typography variant="h5" sx={{ mb: 3, fontWeight: 700 }}>
+        <Translate contentKey="appsupervisorApp.alarma.home.createOrEditLabel">Create or edit a Alarma</Translate>
+      </Typography>
+      {loading ? (
+        <Typography>Loading...</Typography>
+      ) : (
+        <ValidatedForm defaultValues={defaultValues()} onSubmit={saveEntity}>
+          <Grid container spacing={2}>
+            {!isNew ? (
+              <Grid size={{ xs: 12 }}>
                 <ValidatedField
                   name="id"
                   required
@@ -112,7 +109,9 @@ export const AlarmaUpdate = () => {
                   label={translate('global.field.id')}
                   validate={{ required: true }}
                 />
-              ) : null}
+              </Grid>
+            ) : null}
+            <Grid size={{ xs: 12 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.alarma.descripcion')}
                 id="alarma-descripcion"
@@ -123,6 +122,8 @@ export const AlarmaUpdate = () => {
                   required: { value: true, message: translate('entity.validation.required') },
                 }}
               />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.alarma.activatedAt')}
                 id="alarma-activatedAt"
@@ -134,6 +135,8 @@ export const AlarmaUpdate = () => {
                   required: { value: true, message: translate('entity.validation.required') },
                 }}
               />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.alarma.deactivatedAt')}
                 id="alarma-deactivatedAt"
@@ -142,6 +145,8 @@ export const AlarmaUpdate = () => {
                 type="datetime-local"
                 placeholder="YYYY-MM-DD HH:mm"
               />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.alarma.severidad')}
                 id="alarma-severidad"
@@ -155,6 +160,8 @@ export const AlarmaUpdate = () => {
                   </option>
                 ))}
               </ValidatedField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.alarma.estado')}
                 id="alarma-estado"
@@ -168,6 +175,8 @@ export const AlarmaUpdate = () => {
                   </option>
                 ))}
               </ValidatedField>
+            </Grid>
+            <Grid size={{ xs: 12 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.alarma.mensajeUsuario')}
                 id="alarma-mensajeUsuario"
@@ -175,6 +184,8 @@ export const AlarmaUpdate = () => {
                 data-cy="mensajeUsuario"
                 type="text"
               />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 id="alarma-evento"
                 name="evento"
@@ -191,6 +202,8 @@ export const AlarmaUpdate = () => {
                     ))
                   : null}
               </ValidatedField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 id="alarma-acknowledgedBy"
                 name="acknowledgedBy"
@@ -207,24 +220,28 @@ export const AlarmaUpdate = () => {
                     ))
                   : null}
               </ValidatedField>
-              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/alarma" replace color="info">
-                <FontAwesomeIcon icon="arrow-left" />
-                &nbsp;
-                <span className="d-none d-md-inline">
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                <Button component={Link} to="/alarma" replace color="info" startIcon={<ArrowBackIcon />} data-cy="entityCreateCancelButton">
                   <Translate contentKey="entity.action.back">Back</Translate>
-                </span>
-              </Button>
-              &nbsp;
-              <Button color="primary" id="save-entity" data-cy="entityCreateSaveButton" type="submit" disabled={updating}>
-                <FontAwesomeIcon icon="save" />
-                &nbsp;
-                <Translate contentKey="entity.action.save">Save</Translate>
-              </Button>
-            </ValidatedForm>
-          )}
-        </Col>
-      </Row>
-    </div>
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  type="submit"
+                  disabled={updating}
+                  startIcon={<SaveIcon />}
+                  data-cy="entityCreateSaveButton"
+                >
+                  <Translate contentKey="entity.action.save">Save</Translate>
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </ValidatedForm>
+      )}
+    </Paper>
   );
 };
 

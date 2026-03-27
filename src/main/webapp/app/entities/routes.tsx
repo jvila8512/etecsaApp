@@ -9,6 +9,7 @@ import Especialidad from './especialidad';
 import EventoEquipo from './evento-equipo';
 import EventoPlantilla from './evento-plantilla';
 import Alarma from './alarma';
+import AlarmaMonitor from './alarma/alarma-monitor';
 /* jhipster-needle-add-route-import - JHipster will add routes here */
 
 export default () => {
@@ -21,7 +22,10 @@ export default () => {
         <Route path="especialidad/*" element={<Especialidad />} />
         <Route path="evento-equipo/*" element={<EventoEquipo />} />
         <Route path="evento-plantilla/*" element={<EventoPlantilla />} />
-        <Route path="alarma/*" element={<Alarma />} />
+        <Route path="alarma">
+          <Route index element={<Alarma />} />
+          <Route path="monitor" element={<AlarmaMonitor />} />
+        </Route>
         {/* jhipster-needle-add-route-path - JHipster will add routes here */}
       </ErrorBoundaryRoutes>
     </div>

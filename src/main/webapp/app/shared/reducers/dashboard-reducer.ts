@@ -7,10 +7,14 @@ export interface DashboardEquipo {
   estado: string;
   ultimoHeartbeat: string | null;
   variables: Array<{
+    id: number;
     nombreVariable: string;
-    dir: number; // dirección Modbus (añadida para escritura)
+    dir: number;
     valorNumerico: number | null;
     valorBooleano: boolean | null;
+    esLectura: boolean;
+    umbralAlerta: number | null;
+    unidadMedida: string | null;
     timestampActualizacion: string | null;
   }>;
 }
@@ -44,10 +48,9 @@ export const DashboardSlice = createSlice({
       // Mantener cache de datos al desconectar
     },
     dashboardDataReceived(state, action: PayloadAction<{ equipos: DashboardEquipo[]; timestamp: number }>) {
-      // debug: imprimimos el payload completo si la url contiene ?debug
-      if (window.location.search.includes('debug')) {
-        // mantenemos el console.warn para depuración, eslint ahora lo ignora
-        console.warn('dashboardDataReceived payload', action.payload);
+      console.warn('[REDUCER] dashboardDataReceived - equipos:', action.payload.equipos?.length);
+      if (action.payload.equipos?.length > 0) {
+        console.warn('[REDUCER] Primer equipo:', JSON.stringify(action.payload.equipos[0]));
       }
 
       // convert cualquier texto recibido a los tres valores canónicos
@@ -87,48 +90,100 @@ export const DashboardSlice = createSlice({
         state.equipos.forEach(e => lastTimestamps.set(e.id, prev));
       }
 
-      state.equipos = action.payload.equipos.map(e => {
-        const nuevo = { ...e, estado: normalizeEstado(e.estado) };
-        const anterior = oldMap.get(e.id);
-        const prevTs = lastTimestamps.get(e.id) ?? state.lastUpdate ?? action.payload.timestamp;
+      // MERGE: actualizar solo los equipos del payload, mantener los demás
+      const payloadEquiposMap = new Map(action.payload.equipos.map(e => [e.id, e]));
+      const now = Date.now();
+
+      state.equipos = state.equipos.map(existing => {
+        const incoming = payloadEquiposMap.get(existing.id);
+        if (!incoming) return existing;
+
+        const nuevo = { ...incoming, estado: normalizeEstado(incoming.estado) };
+        const anterior = oldMap.get(existing.id);
+        const prevTs = lastTimestamps.get(existing.id) ?? state.lastUpdate ?? action.payload.timestamp;
         const delta = action.payload.timestamp - prevTs;
 
-        // debounce: si el estado cambia y luego vuelve en menos de THRESHOLD,
-        // mantendremos el anterior hasta que se estabilice
         if (anterior && nuevo.estado !== anterior && delta < THRESHOLD) {
-          // keep previous state and skip logging
           nuevo.estado = anterior;
         }
 
-        // Si el equipo trae variables, intentar fusionarlas con las previas
-        if (Array.isArray(nuevo.variables) && nuevo.variables.length > 0) {
-          const prevVars = prevVarMap.get(e.id) ?? new Map<string, any>();
-          const now = Date.now();
-          const pending = state.pendingWrites ?? {};
-          // limpiar entradas antiguas
-          Object.keys(pending).forEach(k => {
-            if (now - (pending[k] ?? 0) > 10000) {
-              delete pending[k];
-            }
+        const pending = state.pendingWrites ?? {};
+        Object.keys(pending).forEach(k => {
+          if (now - (pending[k] ?? 0) > 10000) {
+            delete pending[k];
+          }
+        });
+
+        if (Array.isArray(incoming.variables) && incoming.variables.length > 0) {
+          // Crear mapa de variables existentes por dir+tipo
+          const existingVarsMap = new Map<string, any>();
+          existing.variables?.forEach(v => {
+            const key = `${existing.id}-${v.dir}-${v.valorBooleano !== null ? 'B' : 'N'}`;
+            existingVarsMap.set(key, v);
           });
 
-          nuevo.variables = nuevo.variables.map(v => {
+          // FUSIONAR: SIEMPRE mantener variables existentes + actualizar/agregar las del payload
+          const mergedVarsMap = new Map(existingVarsMap);
+
+          incoming.variables.forEach(v => {
             const typeFlag = v.valorBooleano !== null ? 'B' : 'N';
-            const key = `${e.id}-${v.dir}-${typeFlag}`;
-            // si hay una escritura pendiente reciente, preservamos el valor local
+            const key = `${existing.id}-${v.dir}-${typeFlag}`;
+
+            // Si hay escritura pendiente para esta variable, NO sobrescribir del PLC
             if (pending[key] && now - pending[key] < 5000) {
-              const prev = prevVars.get(key);
-              if (prev) {
-                return { ...v, valorNumerico: prev.valorNumerico, valorBooleano: prev.valorBooleano };
+              const existingVar = existingVarsMap.get(key);
+              if (existingVar) {
+                mergedVarsMap.set(key, { ...v, valorBooleano: existingVar.valorBooleano, valorNumerico: existingVar.valorNumerico });
+                return;
               }
             }
-            return v;
+
+            mergedVarsMap.set(key, v);
           });
+
+          nuevo.variables = Array.from(mergedVarsMap.values()).map((v, index) => ({
+            ...v,
+            id: v.id ?? index + 1,
+            esLectura: v.esLectura ?? true,
+            umbralAlerta: v.umbralAlerta ?? null,
+            unidadMedida: v.unidadMedida ?? null,
+          }));
+
           state.pendingWrites = pending;
+        } else {
+          // Payload tiene variables vacías, MANTENER las existentes
+          nuevo.variables = existing.variables;
         }
 
         return nuevo;
       });
+
+      // Agregar equipos nuevos
+      const existingIds = new Set(state.equipos.map(e => e.id));
+      action.payload.equipos.forEach(incoming => {
+        if (!existingIds.has(incoming.id)) {
+          state.equipos.push({
+            ...incoming,
+            estado: normalizeEstado(incoming.estado),
+            variables: (incoming.variables || []).map((v, index) => ({
+              ...v,
+              id: v.id ?? index + 1,
+              esLectura: v.esLectura ?? true,
+              umbralAlerta: v.umbralAlerta ?? null,
+              unidadMedida: v.unidadMedida ?? null,
+            })),
+          });
+        }
+      });
+
+      // Debug: mostrar estado de variables
+      const eq1500 = state.equipos.find(e => e.id === 1500);
+      console.warn(
+        '[REDUCER] Equipo 1500: numVars=',
+        eq1500?.variables?.length,
+        'vars=',
+        eq1500?.variables?.map((v: any) => v.nombreVariable),
+      );
 
       // actualización normal
       state.lastUpdate = action.payload.timestamp;

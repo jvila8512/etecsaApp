@@ -1,5 +1,6 @@
 package com.etecsa.service.dto;
 
+import com.etecsa.domain.enumeration.Severidad;
 import com.etecsa.domain.enumeration.TipoDato;
 import com.etecsa.domain.enumeration.TipoRegistro;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -40,6 +41,8 @@ public class EventoEquipoDTO implements Serializable {
     private Integer intervaloLectura;
 
     private Double umbralAlerta;
+
+    private Severidad severidadAlerta;
 
     private EquipoDTO equipo;
 
@@ -131,6 +134,14 @@ public class EventoEquipoDTO implements Serializable {
 
     public void setUmbralAlerta(Double umbralAlerta) {
         this.umbralAlerta = umbralAlerta;
+    }
+
+    public Severidad getSeveridadAlerta() {
+        return severidadAlerta;
+    }
+
+    public void setSeveridadAlerta(Severidad severidadAlerta) {
+        this.severidadAlerta = severidadAlerta;
     }
 
     public EquipoDTO getEquipo() {

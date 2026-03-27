@@ -10,12 +10,22 @@ public class EventoResumenDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    private Long id;
     private String nombreVariable;
     private Double valorNumerico; // Null si es booleano
     private Boolean valorBooleano; // Null si es numérico
     private Integer dir; // dirección Modbus
     private String unidadMedida; // Para mostrar "50 Hz"
     private boolean esLectura; // Para diferenciar en el front
+    private Double umbralAlerta; // Umbral para generar alarma
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
 
     public String getNombreVariable() {
         return nombreVariable;
@@ -63,5 +73,13 @@ public class EventoResumenDTO implements Serializable {
 
     public void setEsLectura(boolean esLectura) {
         this.esLectura = esLectura;
+    }
+
+    public Double getUmbralAlerta() {
+        return umbralAlerta;
+    }
+
+    public void setUmbralAlerta(Double umbralAlerta) {
+        this.umbralAlerta = umbralAlerta;
     }
 }

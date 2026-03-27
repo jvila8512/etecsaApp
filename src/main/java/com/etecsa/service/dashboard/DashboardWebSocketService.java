@@ -15,9 +15,13 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 /**
- * Servicio que envía cada 5 segundos el estado de todos los equipos
- * y sus variables al tópico /topic/dashboard.
- * Solo los usuarios autenticados reciben estos datos (configurado en WebsocketSecurityConfiguration).
+ * Servicio que envía el estado de los equipos al tópico /topic/dashboard.
+ *
+ * Dos tipos de envío:
+ * 1. Dashboard completo: envía TODOS los equipos con TODAS las variables (para la vista)
+ * 2. Actualizaciones rápidas: según intervalos, para detección de alarmas
+ *
+ * Solo los usuarios autenticados reciben estos datos.
  */
 @Service
 public class DashboardWebSocketService {
@@ -26,7 +30,7 @@ public class DashboardWebSocketService {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final EquipoRepository equipoRepository;
-    private final PollingService pollingService; // <-- Solo necesitamos este servicio
+    private final PollingService pollingService;
 
     public DashboardWebSocketService(
         SimpMessagingTemplate messagingTemplate,
@@ -38,38 +42,67 @@ public class DashboardWebSocketService {
         this.pollingService = pollingService;
     }
 
-    @Scheduled(fixedRate = 10000) // Se ejecuta cada 5 segundos
-    public void ejecutarCicloDeLectura() {
+    /**
+     * Envía el dashboard completo con TODOS los equipos y variables.
+     * Se ejecuta cada 5 segundos para la vista del dashboard.
+     */
+    @Scheduled(fixedRate = 5000) // Cada 5 segundos
+    public void enviarDashboardCompleto() {
         try {
-            // Pega esto en cualquier lugar que se ejecute una vez, por ejemplo en el conectar
-            // Busca en los logs el valor 1800 = 0x0708
-
-            log.info("Iniciando ciclo de lectura para 200 equipos...");
             List<Equipo> equipos = equipoRepository.findAll();
 
-            // 1. LANZAMOS TODAS LAS LECTURAS EN PARALELO
-            // pollingService.procesarEquipo debe encargarse de Modbus y BD
             List<CompletableFuture<DashboardEquipoDTO>> futures = equipos
                 .stream()
-                .map(pollingService::procesarEquipo)
+                .map(eq -> pollingService.procesarEquipo(eq, false)) // false = incluir TODAS las variables
                 .collect(Collectors.toList());
 
-            // 2. ESPERAMOS A QUE TODOS LOS HILOS TERMINEN
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenAccept(v -> {
-                // 3. RECOLECTAMOS RESULTADOS
                 List<DashboardEquipoDTO> resultados = futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
 
-                // 4. CONSTRUIMOS EL DTO FINAL
                 DashboardDTO dto = new DashboardDTO();
                 dto.setTimestamp(System.currentTimeMillis());
                 dto.setEquipos(resultados);
 
-                // 5. ENVIAMOS POR WEBSOCKET (Estructura única)
-                messagingTemplate.convertAndSend("/topic/dashboard", dto);
-                log.info("Dashboard real-time enviado con {} equipos", resultados.size());
+                messagingTemplate.convertAndSend("/topic/dashboard/completo", dto);
+                log.debug("Dashboard completo enviado con {} equipos", resultados.size());
             });
         } catch (Exception e) {
-            log.error("Error crítico en ciclo de lectura asíncrono: {}", e.getMessage());
+            log.error("Error enviando dashboard completo: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Envía actualizaciones rápidas según intervalos de cada variable.
+     * Se ejecuta cada 1 segundo para detección de alarmas.
+     */
+    @Scheduled(fixedRate = 1000) // Cada 1 segundo
+    public void enviarActualizacionesRapidas() {
+        try {
+            List<Equipo> equipos = equipoRepository.findAll();
+
+            List<CompletableFuture<DashboardEquipoDTO>> futures = equipos
+                .stream()
+                .map(eq -> pollingService.procesarEquipo(eq, true)) // true = filtrar por intervalo
+                .collect(Collectors.toList());
+
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenAccept(v -> {
+                List<DashboardEquipoDTO> resultados = futures
+                    .stream()
+                    .map(CompletableFuture::join)
+                    .filter(eq -> eq.getVariables() != null && !eq.getVariables().isEmpty())
+                    .collect(Collectors.toList());
+
+                if (!resultados.isEmpty()) {
+                    DashboardDTO dto = new DashboardDTO();
+                    dto.setTimestamp(System.currentTimeMillis());
+                    dto.setEquipos(resultados);
+
+                    messagingTemplate.convertAndSend("/topic/dashboard/actualizaciones", dto);
+                    log.trace("Actualizaciones rápidas enviadas con {} equipos", resultados.size());
+                }
+            });
+        } catch (Exception e) {
+            log.error("Error en actualizaciones rápidas: {}", e.getMessage());
         }
     }
 }

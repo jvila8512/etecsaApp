@@ -12,6 +12,7 @@ export interface IEquipo {
   firmwareVersion?: string | null;
   estado?: keyof typeof EstadoEquipo;
   ultimoHeartbeat?: dayjs.Dayjs | null;
+  intervaloBase?: number | null;
   sitio?: ISitio | null;
   especialidades?: IEspecialidad[] | null;
 }

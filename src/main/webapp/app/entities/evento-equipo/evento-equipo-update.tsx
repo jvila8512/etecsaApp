@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Button, Col, Row } from 'reactstrap';
 import { Translate, ValidatedField, ValidatedForm, isNumber, translate } from 'react-jhipster';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { Box, Button, Grid, Paper, Typography } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import SaveIcon from '@mui/icons-material/Save';
 
 import { convertDateTimeFromServer, convertDateTimeToServer, displayDefaultDateTime } from 'app/shared/util/date-utils';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
@@ -98,21 +99,17 @@ export const EventoEquipoUpdate = () => {
         };
 
   return (
-    <div>
-      <Row className="justify-content-center">
-        <Col md="8">
-          <h2 id="appsupervisorApp.eventoEquipo.home.createOrEditLabel" data-cy="EventoEquipoCreateUpdateHeading">
-            <Translate contentKey="appsupervisorApp.eventoEquipo.home.createOrEditLabel">Create or edit a EventoEquipo</Translate>
-          </h2>
-        </Col>
-      </Row>
-      <Row className="justify-content-center">
-        <Col md="8">
-          {loading ? (
-            <p>Loading...</p>
-          ) : (
-            <ValidatedForm defaultValues={defaultValues()} onSubmit={saveEntity}>
-              {!isNew ? (
+    <Paper sx={{ p: 3 }}>
+      <Typography variant="h5" sx={{ mb: 3, fontWeight: 700 }}>
+        <Translate contentKey="appsupervisorApp.eventoEquipo.home.createOrEditLabel">Create or edit a EventoEquipo</Translate>
+      </Typography>
+      {loading ? (
+        <Typography>Loading...</Typography>
+      ) : (
+        <ValidatedForm defaultValues={defaultValues()} onSubmit={saveEntity}>
+          <Grid container spacing={2}>
+            {!isNew ? (
+              <Grid size={{ xs: 12 }}>
                 <ValidatedField
                   name="id"
                   required
@@ -121,7 +118,9 @@ export const EventoEquipoUpdate = () => {
                   label={translate('global.field.id')}
                   validate={{ required: true }}
                 />
-              ) : null}
+              </Grid>
+            ) : null}
+            <Grid size={{ xs: 12 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.eventoEquipo.nombreVariable')}
                 id="evento-equipo-nombreVariable"
@@ -132,6 +131,8 @@ export const EventoEquipoUpdate = () => {
                   required: { value: true, message: translate('entity.validation.required') },
                 }}
               />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.eventoEquipo.direccionModbus')}
                 id="evento-equipo-direccionModbus"
@@ -140,9 +141,11 @@ export const EventoEquipoUpdate = () => {
                 type="text"
                 validate={{
                   required: { value: true, message: translate('entity.validation.required') },
-                  validate: v => isNumber(v) || translate('entity.validation.number'),
+                  min: { value: 0, message: translate('entity.validation.min', { min: 0 }) },
                 }}
               />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.eventoEquipo.tipoRegistro')}
                 id="evento-equipo-tipoRegistro"
@@ -156,6 +159,8 @@ export const EventoEquipoUpdate = () => {
                   </option>
                 ))}
               </ValidatedField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.eventoEquipo.tipoDato')}
                 id="evento-equipo-tipoDato"
@@ -169,14 +174,17 @@ export const EventoEquipoUpdate = () => {
                   </option>
                 ))}
               </ValidatedField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.eventoEquipo.esEscribible')}
                 id="evento-equipo-esEscribible"
                 name="esEscribible"
                 data-cy="esEscribible"
-                check
                 type="checkbox"
               />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.eventoEquipo.valorNumerico')}
                 id="evento-equipo-valorNumerico"
@@ -184,14 +192,17 @@ export const EventoEquipoUpdate = () => {
                 data-cy="valorNumerico"
                 type="text"
               />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.eventoEquipo.valorBooleano')}
                 id="evento-equipo-valorBooleano"
                 name="valorBooleano"
                 data-cy="valorBooleano"
-                check
                 type="checkbox"
               />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.eventoEquipo.timestampActualizacion')}
                 id="evento-equipo-timestampActualizacion"
@@ -200,6 +211,8 @@ export const EventoEquipoUpdate = () => {
                 type="datetime-local"
                 placeholder="YYYY-MM-DD HH:mm"
               />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.eventoEquipo.intervaloLectura')}
                 id="evento-equipo-intervaloLectura"
@@ -207,6 +220,8 @@ export const EventoEquipoUpdate = () => {
                 data-cy="intervaloLectura"
                 type="text"
               />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.eventoEquipo.umbralAlerta')}
                 id="evento-equipo-umbralAlerta"
@@ -214,6 +229,8 @@ export const EventoEquipoUpdate = () => {
                 data-cy="umbralAlerta"
                 type="text"
               />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 id="evento-equipo-equipo"
                 name="equipo"
@@ -230,6 +247,8 @@ export const EventoEquipoUpdate = () => {
                     ))
                   : null}
               </ValidatedField>
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 id="evento-equipo-plantilla"
                 name="plantilla"
@@ -246,24 +265,35 @@ export const EventoEquipoUpdate = () => {
                     ))
                   : null}
               </ValidatedField>
-              <Button tag={Link} id="cancel-save" data-cy="entityCreateCancelButton" to="/evento-equipo" replace color="info">
-                <FontAwesomeIcon icon="arrow-left" />
-                &nbsp;
-                <span className="d-none d-md-inline">
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                <Button
+                  component={Link}
+                  to="/evento-equipo"
+                  replace
+                  color="info"
+                  startIcon={<ArrowBackIcon />}
+                  data-cy="entityCreateCancelButton"
+                >
                   <Translate contentKey="entity.action.back">Back</Translate>
-                </span>
-              </Button>
-              &nbsp;
-              <Button color="primary" id="save-entity" data-cy="entityCreateSaveButton" type="submit" disabled={updating}>
-                <FontAwesomeIcon icon="save" />
-                &nbsp;
-                <Translate contentKey="entity.action.save">Save</Translate>
-              </Button>
-            </ValidatedForm>
-          )}
-        </Col>
-      </Row>
-    </div>
+                </Button>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  type="submit"
+                  disabled={updating}
+                  startIcon={<SaveIcon />}
+                  data-cy="entityCreateSaveButton"
+                >
+                  <Translate contentKey="entity.action.save">Save</Translate>
+                </Button>
+              </Box>
+            </Grid>
+          </Grid>
+        </ValidatedForm>
+      )}
+    </Paper>
   );
 };
 
