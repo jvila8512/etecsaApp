@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Translate, ValidatedField, ValidatedForm, translate } from 'react-jhipster';
-import { Box, Button, Grid, Paper, Typography } from '@mui/material';
+import { Box, Button, Grid, Paper, Typography, Tooltip } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
 
@@ -78,6 +78,8 @@ export const EquipoUpdate = () => {
     isNew
       ? {
           ultimoHeartbeat: displayDefaultDateTime(),
+          intervaloBase: 10,
+          critico: false,
         }
       : {
           estado: 'OPERATIVO',
@@ -85,6 +87,8 @@ export const EquipoUpdate = () => {
           ultimoHeartbeat: convertDateTimeFromServer(equipoEntity.ultimoHeartbeat),
           sitio: equipoEntity?.sitio?.id,
           especialidades: equipoEntity?.especialidades?.map(e => e.id.toString()),
+          intervaloBase: equipoEntity?.intervaloBase ?? 10,
+          critico: equipoEntity?.critico ?? false,
         };
 
   return (
@@ -184,6 +188,31 @@ export const EquipoUpdate = () => {
                 type="datetime-local"
                 placeholder="YYYY-MM-DD HH:mm"
               />
+            </Grid>
+            {/* Intervalo Base */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Tooltip
+                title="Intervalo de lectura en segundos para este equipo. Valor recomendado: 10 segundos. Para equipos críticos usar 3 segundos."
+                arrow
+              >
+                <ValidatedField
+                  label="Intervalo Base (seg)"
+                  id="equipo-intervaloBase"
+                  name="intervaloBase"
+                  data-cy="intervaloBase"
+                  type="number"
+                  defaultValue={10}
+                />
+              </Tooltip>
+            </Grid>
+            {/* Equipo Crítico */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Tooltip
+                title="Marcar como crítico para que sus variables con umbral de alarma se monitoreen cada 500ms (instantáneo). Equipos críticos tienen prioridad en el polling."
+                arrow
+              >
+                <ValidatedField id="equipo-critico" name="critico" data-cy="critico" type="checkbox" label="Equipo Crítico" />
+              </Tooltip>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField

@@ -100,3 +100,8 @@ export const receiveDashboardActualizaciones = (): Observable<any> => listenerAc
  * @deprecated Usar receiveDashboardCompleto() o receiveDashboardActualizaciones()
  */
 export const receiveDashboard = (): Observable<any> => listenerCompleto;
+
+/**
+ * Retorna la Promise de conexión para esperar hasta que esté listo.
+ */
+export const getDashboardConnectionPromise = (): Promise<any> | undefined => connection;

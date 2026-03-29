@@ -4,6 +4,7 @@ import com.etecsa.AppsupervisorApp;
 import com.etecsa.domain.Equipo;
 import com.etecsa.domain.EventoEquipo;
 import com.etecsa.domain.enumeration.TipoDato;
+import com.etecsa.domain.enumeration.TipoRegistro;
 import com.etecsa.repository.EventoEquipoRepository;
 import com.etecsa.service.dto.DashboardEquipoDTO;
 import com.etecsa.service.dto.EventoResumenDTO;
@@ -39,16 +40,43 @@ public class PollingService {
 
     /**
      * Determina el intervalo de lectura en segundos para una variable.
-     * Usa intervaloLectura de EventoEquipo, o默认值 de 10 segundos.
+     *
+     * OPTIMIZADO para alarmas (200+ equipos × 20 variables):
+     * 1. Booleanos con umbral → 500ms (INSTANTÁNEO para alarmas críticas)
+     * 2. Numéricos con umbral → 2 segundos
+     * 3. Equipos críticos → 3 segundos
+     * 4. Intervalo específico configurado → ese valor
+     * 5. Intervalo base del equipo → ese valor
+     * 6. Por defecto → 10 segundos
      */
     private int getIntervaloLectura(EventoEquipo ev, Equipo equipo) {
+        // 1. Booleanos con umbral = INSTANTÁNEO (500ms)
+        if (ev.getUmbralAlerta() != null && ev.getTipoRegistro() == com.etecsa.domain.enumeration.TipoRegistro.BIT_LOGICO_M) {
+            return 1; // 1 segundo (el polling base es cada 500ms)
+        }
+
+        // 2. Numéricos con umbral = 2 segundos
+        if (ev.getUmbralAlerta() != null) {
+            return 2;
+        }
+
+        // 3. Equipos críticos = 3 segundos
+        if (Boolean.TRUE.equals(equipo.getCritico())) {
+            return 3;
+        }
+
+        // 4. Intervalo específico de la variable
         if (ev.getIntervaloLectura() != null && ev.getIntervaloLectura() > 0) {
             return ev.getIntervaloLectura();
         }
+
+        // 5. Intervalo base del equipo
         if (equipo.getIntervaloBase() != null && equipo.getIntervaloBase() > 0) {
             return equipo.getIntervaloBase();
         }
-        return 10; //默认值 10 segundos
+
+        // 6. Por defecto
+        return 10;
     }
 
     /**

@@ -15,6 +15,16 @@ import {
   ToggleButtonGroup,
   Typography,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ViewModuleIcon from '@mui/icons-material/ViewModule';
@@ -23,6 +33,7 @@ import ComputerIcon from '@mui/icons-material/Computer';
 import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import LockIcon from '@mui/icons-material/Lock';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { useAppSelector, useAppDispatch } from 'app/config/store';
 
 import {
@@ -102,6 +113,7 @@ export const Home = () => {
   const [loading, setLoading] = useState(true);
   const [layout, setLayout] = useState<'grid' | 'list'>('grid');
   const [globalFilter, setGlobalFilter] = useState('');
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     if (hasReceivedData) {
@@ -198,8 +210,83 @@ export const Home = () => {
               <ViewListIcon />
             </ToggleButton>
           </ToggleButtonGroup>
+          <IconButton onClick={() => setHelpOpen(true)} color="primary" title="Ayuda sobre intervalos">
+            <HelpOutlineIcon />
+          </IconButton>
         </Box>
       </Box>
+
+      {/* Dialogo de Ayuda */}
+      <Dialog open={helpOpen} onClose={() => setHelpOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Sistema de Monitoreo - Intervalos de Lectura</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            El sistema optimiza automáticamente los intervalos de lectura según el tipo de variable y equipo:
+          </Typography>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: '#f1f5f9' }}>
+                <TableCell>
+                  <strong>Tipo</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Intervalo</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Descripción</strong>
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              <TableRow>
+                <TableCell>
+                  <strong>Booleana con Umbral</strong>
+                </TableCell>
+                <TableCell>
+                  <Chip label="500ms" color="error" size="small" />
+                </TableCell>
+                <TableCell>Variables tipo BIT con umbral configurado (ej: puerta abierta, alarma)</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>
+                  <strong>Numérica con Umbral</strong>
+                </TableCell>
+                <TableCell>
+                  <Chip label="2s" color="warning" size="small" />
+                </TableCell>
+                <TableCell>Variables numéricas con umbral (ej: presion, temperatura)</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>
+                  <strong>Equipo Critico</strong>
+                </TableCell>
+                <TableCell>
+                  <Chip label="3s" color="default" size="small" />
+                </TableCell>
+                <TableCell>Equipos marcados como criticos en su configuracion</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell>
+                  <strong>Normal</strong>
+                </TableCell>
+                <TableCell>
+                  <Chip label="10s" size="small" />
+                </TableCell>
+                <TableCell>Otras variables sin configuracion especial</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+          <Typography variant="body2" sx={{ mt: 3, bgcolor: '#fef3c7', p: 2, borderRadius: 1 }}>
+            <strong>Tip:</strong> Para que una alarma sea instantanea, marca el equipo como critico y configura un umbral de alerta en la
+            variable.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHelpOpen(false)} variant="contained">
+            Entendido
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Grid / List */}
       {loading ? (

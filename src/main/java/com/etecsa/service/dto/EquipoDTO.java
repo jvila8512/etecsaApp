@@ -37,6 +37,8 @@ public class EquipoDTO implements Serializable {
 
     private Integer intervaloBase = 10;
 
+    private Boolean critico = false;
+
     private SitioDTO sitio;
 
     private Set<EspecialidadDTO> especialidades = new HashSet<>();
@@ -111,6 +113,14 @@ public class EquipoDTO implements Serializable {
 
     public void setIntervaloBase(Integer intervaloBase) {
         this.intervaloBase = intervaloBase;
+    }
+
+    public Boolean getCritico() {
+        return critico;
+    }
+
+    public void setCritico(Boolean critico) {
+        this.critico = critico;
     }
 
     public SitioDTO getSitio() {

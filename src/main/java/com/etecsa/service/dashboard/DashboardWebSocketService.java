@@ -73,9 +73,15 @@ public class DashboardWebSocketService {
 
     /**
      * Envía actualizaciones rápidas según intervalos de cada variable.
-     * Se ejecuta cada 1 segundo para detección de alarmas.
+     * Se ejecuta cada 500ms para detección instantánea de alarmas críticas.
+     *
+     * Intervalos dinámicos:
+     * - Booleanos con umbral: cada 1 tick (500ms) = INSTANTÁNEO
+     * - Numéricos con umbral: cada 4 ticks (2s)
+     * - Equipos críticos: cada 6 ticks (3s)
+     * - Otros: según configurado
      */
-    @Scheduled(fixedRate = 1000) // Cada 1 segundo
+    @Scheduled(fixedRate = 500) // Cada 500ms
     public void enviarActualizacionesRapidas() {
         try {
             List<Equipo> equipos = equipoRepository.findAll();

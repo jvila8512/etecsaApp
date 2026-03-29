@@ -56,6 +56,9 @@ public class Equipo implements Serializable {
     @Column(name = "intervalo_base")
     private Integer intervaloBase = 10;
 
+    @Column(name = "critico")
+    private Boolean critico = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     private Sitio sitio;
 
@@ -186,6 +189,19 @@ public class Equipo implements Serializable {
 
     public void setIntervaloBase(Integer intervaloBase) {
         this.intervaloBase = intervaloBase;
+    }
+
+    public Boolean getCritico() {
+        return this.critico;
+    }
+
+    public Equipo critico(Boolean critico) {
+        this.setCritico(critico);
+        return this;
+    }
+
+    public void setCritico(Boolean critico) {
+        this.critico = critico;
     }
 
     public Sitio getSitio() {
