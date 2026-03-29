@@ -49,8 +49,14 @@ export const DashboardSlice = createSlice({
     },
     dashboardDataReceived(state, action: PayloadAction<{ equipos: DashboardEquipo[]; timestamp: number }>) {
       console.warn('[REDUCER] dashboardDataReceived - equipos:', action.payload.equipos?.length);
+
+      // DEBUG: mostrar estado ANTES y DESPUÉS
+      const estadosAntes = state.equipos.map(e => `${e.id}:${e.estado}`).join(', ');
+
       if (action.payload.equipos?.length > 0) {
-        console.warn('[REDUCER] Primer equipo:', JSON.stringify(action.payload.equipos[0]));
+        action.payload.equipos.forEach((eq: DashboardEquipo) => {
+          console.warn(`[REDUCER] RECIBIDO Equipo ${eq.id} (${eq.nombre}): estado=${eq.estado}, variables=${eq.variables?.length ?? 0}`);
+        });
       }
 
       // convert cualquier texto recibido a los tres valores canónicos
@@ -67,6 +73,7 @@ export const DashboardSlice = createSlice({
       };
 
       // robustecer el filtro para ignorar cualquier parpadeo corto (ida y vuelta).
+      // PERMITE cambio inmediato a DESCONECTADO - no esperar 10 segundos
       const THRESHOLD = 10000; // ms
       const oldMap = new Map<number, string>();
       state.equipos.forEach(e => oldMap.set(e.id, e.estado));
@@ -94,18 +101,20 @@ export const DashboardSlice = createSlice({
       const payloadEquiposMap = new Map(action.payload.equipos.map(e => [e.id, e]));
       const now = Date.now();
 
+      console.warn('[REDUCER] Estados antes:', state.equipos.map(e => `${e.id}:${e.estado}`).join(', '));
+      console.warn('[REDUCER] Payload estados:', action.payload.equipos.map(e => `${e.id}:${e.estado}`).join(', '));
+
       state.equipos = state.equipos.map(existing => {
         const incoming = payloadEquiposMap.get(existing.id);
         if (!incoming) return existing;
 
         const nuevo = { ...incoming, estado: normalizeEstado(incoming.estado) };
-        const anterior = oldMap.get(existing.id);
-        const prevTs = lastTimestamps.get(existing.id) ?? state.lastUpdate ?? action.payload.timestamp;
-        const delta = action.payload.timestamp - prevTs;
 
-        if (anterior && nuevo.estado !== anterior && delta < THRESHOLD) {
-          nuevo.estado = anterior;
-        }
+        // DEBUG: forzar actualización del estado
+        console.warn(`[REDUCER] Equipo ${existing.id}: anterior=${existing.estado}, incoming=${incoming.estado}, nuevo=${nuevo.estado}`);
+
+        // NO aplicar filtro anti-parpadeo - siempre actualizar el estado
+        // El filtro causaba que no se actualice inmediatamente
 
         const pending = state.pendingWrites ?? {};
         Object.keys(pending).forEach(k => {
@@ -176,14 +185,8 @@ export const DashboardSlice = createSlice({
         }
       });
 
-      // Debug: mostrar estado de variables
-      const eq1500 = state.equipos.find(e => e.id === 1500);
-      console.warn(
-        '[REDUCER] Equipo 1500: numVars=',
-        eq1500?.variables?.length,
-        'vars=',
-        eq1500?.variables?.map((v: any) => v.nombreVariable),
-      );
+      // Debug: mostrar estado DESPUÉS de actualizar
+      console.warn('[REDUCER] ESTADOS DESPUÉS:', state.equipos.map(e => `${e.id}:${e.estado}`).join(', '));
 
       // actualización normal
       state.lastUpdate = action.payload.timestamp;

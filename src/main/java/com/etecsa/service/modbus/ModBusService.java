@@ -73,60 +73,74 @@ public class ModBusService {
     // GESTIÓN DE CONEXIONES
     // ═══════════════════════════════════════════════════════════
 
+    /**
+     * Conectar al equipo.
+     * REUTILIZA el cliente existente si ya hay uno para evitar multiplicar conexiones al PLC.
+     */
     public boolean connectToGenerator(String generatorId, String host, int port, int unitId) {
+        log.info(">>> connectToGenerator: {} → {}:{}:{}", generatorId, host, port, unitId);
+
         try {
-            // Si ya está conectado y verificado, no reconectar
-            if (Boolean.TRUE.equals(connectedState.get(generatorId))) {
-                ConnectionInfo info = connectionInfo.get(generatorId);
-                if (info != null && info.host.equals(host) && info.port == port) {
-                    log.info("✅ Ya conectado {} → {}:{}", generatorId, host, port);
+            // Verificar si ya existe un cliente
+            ModbusTcpClient existingClient = clients.get(generatorId);
+            ConnectionInfo existingInfo = connectionInfo.get(generatorId);
+
+            if (existingClient != null && existingInfo != null && existingInfo.host.equals(host) && existingInfo.port == port) {
+                // Cliente existente - intentar usar directamente
+                // NO crear nuevo cliente para evitar multiplicar conexiones al PLC
+                try {
+                    existingClient.readHoldingRegisters(unitId, new ReadHoldingRegistersRequest(0, 1));
+                    connectedState.put(generatorId, true);
+                    log.info(">>> ✅ Cliente existente funciona, retornando true");
                     return true;
+                } catch (Exception e) {
+                    // Lectura falló, pero NO destruir el cliente
+                    // La biblioteca digitalpetri reintentará automáticamente
+                    log.warn(">>> Lectura falló pero conservamos cliente: {}", e.getMessage());
+                    connectedState.put(generatorId, false);
+                    return false;
                 }
             }
 
-            disconnectGenerator(generatorId); // limpiar anterior
+            // NO existe cliente - crear uno nuevo
+            // Primero desconectar cualquier cliente anterior (IP diferente)
+            if (existingClient != null) {
+                try {
+                    existingClient.disconnect();
+                } catch (Exception ignored) {}
+            }
 
-            log.info("🔌 Conectando {} → {}:{} (UnitID:{})...", generatorId, host, port, unitId);
+            log.info(">>> Creando nuevo cliente Modbus para {}", generatorId);
 
             var transport = NettyTcpClientTransport.create(cfg -> {
                 cfg.setHostname(host);
                 cfg.setPort(port);
+                cfg.setConnectTimeout(java.time.Duration.ofSeconds(5));
+                cfg.setConnectPersistent(true);
+                cfg.setReconnectLazy(false);
             });
 
             ModbusTcpClient client = ModbusTcpClient.create(transport);
-
-            // ✅ connect() ya es SÍNCRONO en esta versión de digitalpetri.
-            // Bloquea internamente hasta que la conexión TCP está lista o lanza excepción.
-            // NO llamar .get() — devuelve void.
             client.connect();
 
-            // Guardar temporalmente para poder usar getClientOrNull en la prueba
+            // Guardar cliente
             clients.put(generatorId, client);
             connectionInfo.put(generatorId, new ConnectionInfo(host, port, unitId));
-            connectedState.put(generatorId, true);
 
-            // ✅ VERIFICACIÓN REAL: leer registro 0 como prueba
-            // Netty puede reportar connect() exitoso antes del TCP handshake completo.
-            // Esta lectura confirma que el PLC realmente responde.
+            // Verificar con lectura de prueba
             try {
                 client.readHoldingRegisters(unitId, new ReadHoldingRegistersRequest(0, 1));
-                log.info("✅ Conectado y verificado {} → {}:{}", generatorId, host, port);
+                connectedState.put(generatorId, true);
+                log.info(">>> ✅ Nuevo cliente conectado y funcionando");
                 return true;
-            } catch (Exception testEx) {
-                log.error("❌ connect() ok pero PLC no responde {} → {}:{} : {}", generatorId, host, port, testEx.getMessage());
+            } catch (Exception e) {
+                log.warn(">>> Lectura de prueba falló: {}", e.getMessage());
                 connectedState.put(generatorId, false);
-                clients.remove(generatorId);
-                connectionInfo.remove(generatorId);
-                try {
-                    client.disconnect();
-                } catch (Exception ignored) {}
                 return false;
             }
         } catch (Exception e) {
+            log.error(">>> ❌ Error en connectToGenerator: {}", e.getMessage());
             connectedState.put(generatorId, false);
-            clients.remove(generatorId);
-            connectionInfo.remove(generatorId);
-            log.error("❌ Falló conexión {} → {}:{} : {}", generatorId, host, port, e.getMessage());
             return false;
         }
     }
@@ -158,6 +172,66 @@ public class ModBusService {
      */
     public boolean isConnected(String generatorId) {
         return Boolean.TRUE.equals(connectedState.get(generatorId));
+    }
+
+    /**
+     * Verifica que la conexión TCP real esté activa.
+     */
+    public boolean verificarConexion(String generatorId) {
+        ModbusTcpClient client = clients.get(generatorId);
+        if (client == null) {
+            return false;
+        }
+
+        try {
+            boolean tcpActivo = client.isConnected();
+
+            if (tcpActivo) {
+                ConnectionInfo info = connectionInfo.get(generatorId);
+                if (info != null) {
+                    try {
+                        client.readHoldingRegisters(info.unitId, new ReadHoldingRegistersRequest(0, 1));
+                        return true;
+                    } catch (Exception e) {
+                        connectedState.put(generatorId, false);
+                        return false;
+                    }
+                }
+            }
+
+            if (!tcpActivo && Boolean.TRUE.equals(connectedState.get(generatorId))) {
+                connectedState.put(generatorId, false);
+            }
+
+            return tcpActivo;
+        } catch (Exception e) {
+            connectedState.put(generatorId, false);
+            return false;
+        }
+    }
+
+    /**
+     * Marca el equipo como desconectado (sin destruir el cliente).
+     * El cliente puede seguir intentando reconectar automáticamente.
+     */
+    public void forzarDesconexion(String generatorId) {
+        connectedState.put(generatorId, false);
+        log.info(">>> forzarDesconexion: {} marcado como desconectado (cliente preservado para reconexión)", generatorId);
+    }
+
+    /**
+     * Desconexión completa (para cuando se cambia la IP del equipo).
+     */
+    public void desconectarCompletamente(String generatorId) {
+        connectedState.put(generatorId, false);
+        ModbusTcpClient client = clients.remove(generatorId);
+        connectionInfo.remove(generatorId);
+        if (client != null) {
+            try {
+                client.disconnect();
+            } catch (Exception ignored) {}
+            log.info(">>> Desconexión completa de {}", generatorId);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════

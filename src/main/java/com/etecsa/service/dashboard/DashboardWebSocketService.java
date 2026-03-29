@@ -53,7 +53,7 @@ public class DashboardWebSocketService {
 
             List<CompletableFuture<DashboardEquipoDTO>> futures = equipos
                 .stream()
-                .map(eq -> pollingService.procesarEquipo(eq, false, false)) // false, false = sin filtro, sin alarmas (completo)
+                .map(eq -> pollingService.procesarEquipo(eq, false, false))
                 .collect(Collectors.toList());
 
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenAccept(v -> {
@@ -83,6 +83,7 @@ public class DashboardWebSocketService {
      */
     @Scheduled(fixedRate = 500) // Cada 500ms
     public void enviarActualizacionesRapidas() {
+        log.error("######################### INICIO ACTUALIZACIONES RAPIDAS #########################");
         try {
             List<Equipo> equipos = equipoRepository.findAll();
 
@@ -92,11 +93,7 @@ public class DashboardWebSocketService {
                 .collect(Collectors.toList());
 
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenAccept(v -> {
-                List<DashboardEquipoDTO> resultados = futures
-                    .stream()
-                    .map(CompletableFuture::join)
-                    .filter(eq -> eq.getVariables() != null && !eq.getVariables().isEmpty())
-                    .collect(Collectors.toList());
+                List<DashboardEquipoDTO> resultados = futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
 
                 if (!resultados.isEmpty()) {
                     DashboardDTO dto = new DashboardDTO();

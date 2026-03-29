@@ -11,6 +11,7 @@ import com.etecsa.service.dto.AlarmaDeteccionDTO;
 import com.etecsa.service.dto.DashboardEquipoDTO;
 import com.etecsa.service.dto.EventoResumenDTO;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +39,13 @@ public class PollingService {
 
     // Mapa para evitar detecciones duplicadas (Key: eventoId, Value: timestamp)
     private final ConcurrentHashMap<Long, Long> lastAlarmCheck = new ConcurrentHashMap<>();
+
+    // Backoff para equipos desconectados - no reintentar inmediatamente
+    // Key: equipoId, Value: último intento de conexión
+    private final ConcurrentHashMap<Long, Long> lastConnectionAttempt = new ConcurrentHashMap<>();
+
+    // Intervalo mínimo entre intentos de conexión (en ms) para equipos desconectados
+    private static final long RECONNECT_BACKOFF_MS = 30000; // 30 segundos
 
     public PollingService(ModBusService modBusService, EventoEquipoRepository eventoEquipoRepository, AlarmaService alarmaService) {
         this.modBusService = modBusService;
@@ -113,14 +121,21 @@ public class PollingService {
 
         String genId = equipo.getId().toString();
 
-        // ── Conectar si es necesario ──────────────────────────────
-        if (!modBusService.isConnected(genId)) {
-            boolean ok = modBusService.connectToGenerator(genId, equipo.getDireccionIp());
-            if (!ok) {
-                eqDto.setEstado("DESCONECTADO");
-                return CompletableFuture.completedFuture(eqDto);
-            }
+        // SIEMPRE intentar conectar - el ModBusService maneja reconexiones
+        boolean ok = modBusService.connectToGenerator(genId, equipo.getDireccionIp());
+
+        LOG.info(">>> POLLING: equipo={}, connectToGenerator={}", genId, ok);
+
+        if (!ok) {
+            eqDto.setEstado("DESCONECTADO");
+            eqDto.setVariables(new ArrayList<>());
+            LOG.info(">>> POLLING: RETORNANDO DESCONECTADO para {}", genId);
+            return CompletableFuture.completedFuture(eqDto);
         }
+
+        // Conectado, leer variables
+        eqDto.setEstado("OPERATIVO");
+        LOG.info(">>> POLLING: RETORNANDO OPERATIVO para {}", genId);
 
         try {
             List<EventoEquipo> eventos = eventoEquipoRepository.findByEquipoIdWithPlantilla(equipo.getId());
@@ -231,7 +246,8 @@ public class PollingService {
             LOG.error("Error leyendo PLC {} ({}): {}", eqDto.getNombre(), equipo.getDireccionIp(), e.getMessage());
             String msg = e.getMessage() != null ? e.getMessage() : "";
             if (msg.contains("Connection") || msg.contains("Timeout") || msg.contains("closed")) {
-                modBusService.disconnectGenerator(genId);
+                // Error de conexión → forzar desconexión para próximo ciclo
+                modBusService.forzarDesconexion(genId);
                 eqDto.setEstado("DESCONECTADO");
             } else {
                 eqDto.setEstado("ERROR");

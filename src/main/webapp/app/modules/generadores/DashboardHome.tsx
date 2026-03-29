@@ -75,9 +75,18 @@ const getChipColor = (estado: string) => {
 // ══════════════════════════════════════════════════════════════
 const DashboardHome: React.FC<DashboardHomeProps> = ({ onEntrar }) => {
   const dispatch = useAppDispatch();
-  const equipos = useAppSelector(getDashboardEquipos) as EquipoDTO[];
+  const equipos = useAppSelector(state => {
+    const eqs = getDashboardEquipos(state);
+    // Force return a new array to trigger re-render
+    return eqs ? [...eqs] : [];
+  }) as EquipoDTO[];
   const isConnected = useAppSelector(getDashboardConnected);
   const hasReceivedData = useAppSelector(getDashboardHasReceivedData);
+
+  // DEBUG: ver cambios en equipos
+  useEffect(() => {
+    console.warn('[DASHBOARD] equipos actualizados:', equipos?.map(e => `${e.id}:${e.estado}`).join(', '));
+  }, [equipos]);
 
   const [layout, setLayout] = useState<'grid' | 'list'>('grid');
   const [globalFilter, setGlobalFilter] = useState('');
