@@ -53,7 +53,7 @@ public class DashboardWebSocketService {
 
             List<CompletableFuture<DashboardEquipoDTO>> futures = equipos
                 .stream()
-                .map(eq -> pollingService.procesarEquipo(eq, false)) // false = incluir TODAS las variables
+                .map(eq -> pollingService.procesarEquipo(eq, false, false)) // false, false = sin filtro, sin alarmas (completo)
                 .collect(Collectors.toList());
 
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenAccept(v -> {
@@ -88,7 +88,7 @@ public class DashboardWebSocketService {
 
             List<CompletableFuture<DashboardEquipoDTO>> futures = equipos
                 .stream()
-                .map(eq -> pollingService.procesarEquipo(eq, true)) // true = filtrar por intervalo
+                .map(eq -> pollingService.procesarEquipo(eq, true, true)) // true, true = filtrar por intervalo, detectar alarmas
                 .collect(Collectors.toList());
 
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenAccept(v -> {

@@ -56,6 +56,7 @@ interface VariableData {
   valorBooleano: boolean | null;
   umbralAlerta: number | null;
   unidadMedida: string | null;
+  habilitarAlarma: boolean | null;
 }
 
 interface EquipoData {
@@ -101,12 +102,17 @@ export const AlarmaMonitor = () => {
   const alarmasActivas = todasLasAlarmas;
   const hasUnacknowledged = alarmasActivas.some(a => a.estado === 'ACTIVA');
 
-  // Crear mapa de valores actuales: eventoId -> boolean (está en alarma?)
+  // Crear mapa de valores actuales: eventoId -> boolean (esta en alarma?)
+  // Solo considera variables con habilitarAlarma = true
   const valoresActualesMap = useMemo(() => {
     const map = new Map<number, boolean>();
     dashboardData.forEach(equipo => {
       if (equipo.estado !== 'OPERATIVO') return;
       equipo.variables?.forEach(variable => {
+        // Solo mostrar estado de alarma si tiene habilitarAlarma
+        if (!variable.habilitarAlarma) {
+          return;
+        }
         let isAlarm = false;
         if (variable.valorBooleano === true && variable.umbralAlerta != null) {
           isAlarm = true;

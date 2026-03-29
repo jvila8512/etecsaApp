@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Translate, ValidatedField, ValidatedForm, isNumber, translate } from 'react-jhipster';
-import { Box, Button, Grid, Paper, Typography } from '@mui/material';
+import { Box, Button, Grid, Paper, Typography, Tooltip } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 import { convertDateTimeFromServer, convertDateTimeToServer, displayDefaultDateTime } from 'app/shared/util/date-utils';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
@@ -88,6 +89,7 @@ export const EventoEquipoUpdate = () => {
     isNew
       ? {
           timestampActualizacion: displayDefaultDateTime(),
+          habilitarAlarma: false,
         }
       : {
           tipoRegistro: 'BIT_LOGICO_M',
@@ -96,6 +98,7 @@ export const EventoEquipoUpdate = () => {
           timestampActualizacion: convertDateTimeFromServer(eventoEquipoEntity.timestampActualizacion),
           equipo: eventoEquipoEntity?.equipo?.id,
           plantilla: eventoEquipoEntity?.plantilla?.id,
+          habilitarAlarma: eventoEquipoEntity?.habilitarAlarma ?? false,
         };
 
   return (
@@ -230,6 +233,21 @@ export const EventoEquipoUpdate = () => {
                 type="text"
               />
             </Grid>
+            {/* Habilitar Alarma */}
+            <Grid size={{ xs: 12, sm: 6 }} sx={{ mt: 2, mb: 1, p: 2, bgcolor: '#fff3cd', borderRadius: 1 }}>
+              <Tooltip
+                title="Activar para que esta variable genere alarmas automaticas. Ejemplo: Puerta Abierta, Presion Alta, Temperatura, etc. Variables de control como Apagar Motor deben estar desmarcadas."
+                arrow
+              >
+                <ValidatedField
+                  id="evento-equipo-habilitarAlarma"
+                  name="habilitarAlarma"
+                  data-cy="habilitarAlarma"
+                  type="checkbox"
+                  label="Habilitar Alarma"
+                />
+              </Tooltip>
+            </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 id="evento-equipo-equipo"
@@ -237,6 +255,7 @@ export const EventoEquipoUpdate = () => {
                 data-cy="equipo"
                 label={translate('appsupervisorApp.eventoEquipo.equipo')}
                 type="select"
+                sx={{ mb: 2 }}
               >
                 <option value="" key="0" />
                 {equipos
@@ -255,6 +274,7 @@ export const EventoEquipoUpdate = () => {
                 data-cy="plantilla"
                 label={translate('appsupervisorApp.eventoEquipo.plantilla')}
                 type="select"
+                sx={{ mb: 2 }}
               >
                 <option value="" key="0" />
                 {eventoPlantillas

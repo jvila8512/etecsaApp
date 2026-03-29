@@ -18,6 +18,7 @@ public class EventoResumenDTO implements Serializable {
     private String unidadMedida; // Para mostrar "50 Hz"
     private boolean esLectura; // Para diferenciar en el front
     private Double umbralAlerta; // Umbral para generar alarma
+    private Boolean habilitarAlarma; // Habilitar deteccion de alarma
 
     public Long getId() {
         return id;
@@ -81,5 +82,13 @@ public class EventoResumenDTO implements Serializable {
 
     public void setUmbralAlerta(Double umbralAlerta) {
         this.umbralAlerta = umbralAlerta;
+    }
+
+    public Boolean getHabilitarAlarma() {
+        return habilitarAlarma;
+    }
+
+    public void setHabilitarAlarma(Boolean habilitarAlarma) {
+        this.habilitarAlarma = habilitarAlarma;
     }
 }

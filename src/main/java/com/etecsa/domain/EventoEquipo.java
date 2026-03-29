@@ -68,6 +68,9 @@ public class EventoEquipo implements Serializable {
     @Column(name = "severidad_alerta")
     private Severidad severidadAlerta;
 
+    @Column(name = "habilitar_alarma")
+    private Boolean habilitarAlarma = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JsonIgnoreProperties(value = { "sitio", "especialidades" }, allowSetters = true)
     private Equipo equipo;
@@ -232,6 +235,19 @@ public class EventoEquipo implements Serializable {
 
     public void setSeveridadAlerta(Severidad severidadAlerta) {
         this.severidadAlerta = severidadAlerta;
+    }
+
+    public Boolean getHabilitarAlarma() {
+        return this.habilitarAlarma;
+    }
+
+    public EventoEquipo habilitarAlarma(Boolean habilitarAlarma) {
+        this.setHabilitarAlarma(habilitarAlarma);
+        return this;
+    }
+
+    public void setHabilitarAlarma(Boolean habilitarAlarma) {
+        this.habilitarAlarma = habilitarAlarma;
     }
 
     public Equipo getEquipo() {

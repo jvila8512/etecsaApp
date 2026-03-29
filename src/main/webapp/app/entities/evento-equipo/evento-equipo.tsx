@@ -80,6 +80,7 @@ export const EventoEquipo = () => {
     intervaloLectura: '',
     umbralAlerta: '',
     severidadAlerta: '',
+    habilitarAlarma: false,
   });
 
   const getAllEntities = () => {
@@ -142,6 +143,7 @@ export const EventoEquipo = () => {
       intervaloLectura: '',
       umbralAlerta: '',
       severidadAlerta: '',
+      habilitarAlarma: false,
     });
   };
 
@@ -189,6 +191,7 @@ export const EventoEquipo = () => {
       intervaloLectura: rowData.intervaloLectura?.toString() || '',
       umbralAlerta: rowData.umbralAlerta?.toString() || '',
       severidadAlerta: rowData.severidadAlerta || '',
+      habilitarAlarma: rowData.habilitarAlarma || false,
     });
     setFormKey(prev => prev + 1);
     setEventoEquipoDialog(true);
@@ -205,7 +208,18 @@ export const EventoEquipo = () => {
     const { name, value, type } = e.target;
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
-      setFormValues(prev => ({ ...prev, [name]: checked }));
+      setFormValues(prev => {
+        const newValues = { ...prev, [name]: checked };
+        // Si marca "Escribible", desmarca y desactiva "Habilitar Alarma"
+        if (name === 'esEscribible' && checked) {
+          newValues.habilitarAlarma = false;
+        }
+        // Si marca "Habilitar Alarma", desmarca y desactiva "Escribible"
+        if (name === 'habilitarAlarma' && checked) {
+          newValues.esEscribible = false;
+        }
+        return newValues;
+      });
     } else {
       setFormValues(prev => ({ ...prev, [name]: value }));
     }
@@ -511,9 +525,36 @@ export const EventoEquipo = () => {
                   value={formValues.umbralAlerta}
                   onChange={handleInputChange}
                   fullWidth
-                  placeholder="Vacío = sin alarma. 1 = booleano. Número = umbral numérico"
+                  placeholder="Vacio = sin alarma. 1 = booleano. Numero = umbral numerico"
                   helperText="Configure para activar alarmas"
+                  sx={{ mb: 2 }}
                 />
+                {/* Habilitar Alarma - Checkbox destacado */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    mb: 2,
+                    p: 1.5,
+                    bgcolor: '#fff3cd',
+                    borderRadius: 1,
+                    opacity: formValues.esEscribible ? 0.5 : 1,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    id="evento-equipo-habilitarAlarma"
+                    name="habilitarAlarma"
+                    checked={formValues.habilitarAlarma}
+                    onChange={handleInputChange}
+                    disabled={formValues.esEscribible}
+                    style={{ width: 18, height: 18 }}
+                  />
+                  <label htmlFor="evento-equipo-habilitarAlarma" style={{ fontWeight: 600 }}>
+                    Habilitar Alarma Automatica {formValues.esEscribible && '(bloqueado - es escribible)'}
+                  </label>
+                </Box>
                 <TextField
                   select
                   label="Severidad de Alerta"
@@ -523,6 +564,7 @@ export const EventoEquipo = () => {
                   onChange={handleInputChange}
                   fullWidth
                   SelectProps={{ native: true }}
+                  sx={{ mb: 2, mt: 2 }}
                 >
                   <option value="">-- Por defecto --</option>
                   {severidadValues.map(sev => (
@@ -531,16 +573,27 @@ export const EventoEquipo = () => {
                     </option>
                   ))}
                 </TextField>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    mt: formValues.habilitarAlarma ? 0 : 2,
+                    opacity: formValues.habilitarAlarma ? 0.5 : 1,
+                  }}
+                >
                   <input
                     type="checkbox"
                     id="evento-equipo-esEscribible"
                     name="esEscribible"
                     checked={formValues.esEscribible}
                     onChange={handleInputChange}
+                    disabled={formValues.habilitarAlarma}
                     style={{ width: 18, height: 18 }}
                   />
-                  <label htmlFor="evento-equipo-esEscribible">Escribible (se puede modificar desde el sistema)</label>
+                  <label htmlFor="evento-equipo-esEscribible">
+                    Escribible {formValues.habilitarAlarma && '(bloqueado - alarma es solo lectura)'}
+                  </label>
                 </Box>
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
                   <Button onClick={hideDialogNuevo}>Cancelar</Button>

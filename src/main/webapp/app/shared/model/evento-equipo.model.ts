@@ -18,6 +18,7 @@ export interface IEventoEquipo {
   intervaloLectura?: number | null;
   umbralAlerta?: number | null;
   severidadAlerta?: keyof typeof Severidad | null;
+  habilitarAlarma?: boolean | null;
   equipo?: IEquipo | null;
   plantilla?: IEventoPlantilla | null;
 }

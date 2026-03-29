@@ -6,6 +6,8 @@ import com.etecsa.domain.EventoEquipo;
 import com.etecsa.domain.enumeration.TipoDato;
 import com.etecsa.domain.enumeration.TipoRegistro;
 import com.etecsa.repository.EventoEquipoRepository;
+import com.etecsa.service.AlarmaService;
+import com.etecsa.service.dto.AlarmaDeteccionDTO;
 import com.etecsa.service.dto.DashboardEquipoDTO;
 import com.etecsa.service.dto.EventoResumenDTO;
 import java.time.ZonedDateTime;
@@ -28,14 +30,19 @@ public class PollingService {
 
     private final ModBusService modBusService;
     private final EventoEquipoRepository eventoEquipoRepository;
+    private final AlarmaService alarmaService;
 
     // Mapa para trackear última vez que se envió cada variable por WebSocket
     // Key: eventoId, Value: última vez enviada (epoch millis)
     private final ConcurrentHashMap<Long, Long> lastSentTime = new ConcurrentHashMap<>();
 
-    public PollingService(ModBusService modBusService, EventoEquipoRepository eventoEquipoRepository) {
+    // Mapa para evitar detecciones duplicadas (Key: eventoId, Value: timestamp)
+    private final ConcurrentHashMap<Long, Long> lastAlarmCheck = new ConcurrentHashMap<>();
+
+    public PollingService(ModBusService modBusService, EventoEquipoRepository eventoEquipoRepository, AlarmaService alarmaService) {
         this.modBusService = modBusService;
         this.eventoEquipoRepository = eventoEquipoRepository;
+        this.alarmaService = alarmaService;
     }
 
     /**
@@ -98,7 +105,7 @@ public class PollingService {
     }
 
     @Async("modbusExecutor")
-    public CompletableFuture<DashboardEquipoDTO> procesarEquipo(Equipo equipo, boolean enviarPorWebSocket) {
+    public CompletableFuture<DashboardEquipoDTO> procesarEquipo(Equipo equipo, boolean enviarPorWebSocket, boolean detectarAlarmas) {
         DashboardEquipoDTO eqDto = new DashboardEquipoDTO();
         eqDto.setId(equipo.getId());
         eqDto.setNombre(equipo.getNombre());
@@ -132,6 +139,7 @@ public class PollingService {
                 res.setUnidadMedida(ev.getPlantilla().getUnidadMedida());
                 res.setEsLectura(esLectura);
                 res.setUmbralAlerta(ev.getUmbralAlerta());
+                res.setHabilitarAlarma(ev.getHabilitarAlarma());
 
                 int dir = ev.getDireccionModbus();
                 res.setDir(dir);
@@ -142,11 +150,15 @@ public class PollingService {
                 // ══════════════════════════════════════════════════
                 // LEER SEGÚN tipoRegistro + tipoDato
                 // ══════════════════════════════════════════════════
+                Boolean valorBooleanoLeido = null;
+                Double valorNumericoLeido = null;
+
                 switch (ev.getTipoRegistro()) {
                     case BIT_LOGICO_M: {
                         Boolean val = modBusService.readM(genId, dir);
                         if (val != null) {
                             res.setValorBooleano(val);
+                            valorBooleanoLeido = val;
                             if (esLectura) {
                                 ev.setValorBooleano(val);
                             }
@@ -161,6 +173,7 @@ public class PollingService {
                             Double valor = interpretarMW(raw, ev.getTipoDato());
                             Double escalado = escalar(valor, ev.getPlantilla().getScalingFactor());
                             res.setValorNumerico(escalado);
+                            valorNumericoLeido = escalado;
                             if (esLectura) {
                                 ev.setValorNumerico(escalado);
                             }
@@ -175,6 +188,7 @@ public class PollingService {
                             Double valor = interpretarMD(raw, ev.getTipoDato());
                             Double escalado = escalar(valor, ev.getPlantilla().getScalingFactor());
                             res.setValorNumerico(escalado);
+                            valorNumericoLeido = escalado;
                             if (esLectura) {
                                 ev.setValorNumerico(escalado);
                             }
@@ -186,6 +200,18 @@ public class PollingService {
                     default:
                         LOG.warn("TipoRegistro desconocido: {} en variable {}", ev.getTipoRegistro(), ev.getNombreVariable());
                         break;
+                }
+
+                // ── DETECTAR ALARMAS (solo si tiene umbral configurado y se pide) ─
+                if (detectarAlarmas) {
+                    LOG.info(
+                        ">>> CHECK ALARMA: variable={}, umbral={}, bool={}, num={}",
+                        ev.getNombreVariable(),
+                        ev.getUmbralAlerta(),
+                        valorBooleanoLeido,
+                        valorNumericoLeido
+                    );
+                    detectarAlarma(ev, valorBooleanoLeido, valorNumericoLeido);
                 }
 
                 // ── SIEMPRE guardar a BD ───────────────────────────
@@ -216,11 +242,11 @@ public class PollingService {
     }
 
     /**
-     * Versión legacy para compatibilidad (envía siempre).
+     * Version legacy para compatibilidad (envia siempre).
      */
     @Async("modbusExecutor")
     public CompletableFuture<DashboardEquipoDTO> procesarEquipo(Equipo equipo) {
-        return procesarEquipo(equipo, true);
+        return procesarEquipo(equipo, true, true);
     }
 
     private Double interpretarMW(int raw, TipoDato tipoDato) {
@@ -258,5 +284,64 @@ public class PollingService {
         if (valor == null) return null;
         if (scalingFactor == null || scalingFactor == 0.0) return valor;
         return valor * scalingFactor;
+    }
+
+    /**
+     * Detecta alarmas durante el polling.
+     *
+     * Logica:
+     * - Solo si habilitarAlarma = true
+     * - Booleana: alarma si valor=true Y tiene umbral configurado
+     * - Numerica: alarma si valor > umbral
+     *
+     * Evita duplicados: solo detecta cada 1 segundo por evento
+     */
+    private void detectarAlarma(EventoEquipo ev, Boolean valorBooleano, Double valorNumerico) {
+        // Solo procesar si tiene habilitadas las alarmas
+        if (ev.getHabilitarAlarma() == null || !ev.getHabilitarAlarma()) {
+            return;
+        }
+
+        // Solo procesar si tiene umbral configurado
+        if (ev.getUmbralAlerta() == null) {
+            return;
+        }
+
+        // Evitar detecciones muy seguidas (cada 1 segundo maximo)
+        long now = System.currentTimeMillis();
+        Long lastCheck = lastAlarmCheck.get(ev.getId());
+        if (lastCheck != null && (now - lastCheck) < 1000) {
+            return;
+        }
+        lastAlarmCheck.put(ev.getId(), now);
+
+        boolean esAlarma = false;
+
+        // Boolean: alarma si true (puerta abierta, alarma activada, etc.)
+        if (valorBooleano != null && valorBooleano) {
+            esAlarma = true;
+            LOG.info(">>> ALARMA BOOLEANA: {} en equipo {}", ev.getNombreVariable(), ev.getEquipo().getNombre());
+        }
+        // Numérica: alarma si valor > umbral
+        else if (valorNumerico != null && valorNumerico > ev.getUmbralAlerta()) {
+            esAlarma = true;
+            LOG.info(">>> ALARMA NUMERICA: {}={} > umbral={}", ev.getNombreVariable(), valorNumerico, ev.getUmbralAlerta());
+        }
+
+        if (esAlarma) {
+            try {
+                AlarmaDeteccionDTO deteccion = new AlarmaDeteccionDTO();
+                deteccion.setEventoId(ev.getId());
+                deteccion.setEsAlarma(true);
+                deteccion.setValorBooleano(valorBooleano);
+                deteccion.setValorActual(valorNumerico);
+                deteccion.setUmbral(ev.getUmbralAlerta());
+                deteccion.setSeveridad(ev.getSeveridadAlerta() != null ? ev.getSeveridadAlerta().name() : "ALTA");
+
+                alarmaService.procesarDeteccion(deteccion);
+            } catch (Exception e) {
+                LOG.error("Error creando alarma: {}", e.getMessage());
+            }
+        }
     }
 }

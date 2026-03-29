@@ -60,19 +60,20 @@ public class AlarmaService {
      * - Si esAlarma=false → NO hacer nada (el operador resuelve manualmente)
      */
     public AlarmaDTO procesarDeteccion(AlarmaDeteccionDTO deteccion) {
-        LOG.debug("Procesando detección de alarma para evento {}: esAlarma={}", deteccion.getEventoId(), deteccion.getEsAlarma());
+        LOG.info(">>> procesarDeteccion: evento={}, esAlarma={}", deteccion.getEventoId(), deteccion.getEsAlarma());
 
         List<EstadoAlarma> estadosActivos = Arrays.asList(EstadoAlarma.ACTIVA, EstadoAlarma.RECONOCIDA);
 
         if (deteccion.getEsAlarma() == null || !deteccion.getEsAlarma()) {
-            LOG.debug("Valor normal (false), no se toman acciones sobre alarmas existentes");
+            LOG.info(">>> Valor normal (false), no se toman acciones");
             return null;
         }
 
         long countExistentes = alarmaRepository.countByEventoIdAndEstadoIn(deteccion.getEventoId(), estadosActivos);
+        LOG.info(">>> Alarmas existentes (ACTIVA/RECONOCIDA): {}", countExistentes);
 
         if (countExistentes > 0) {
-            LOG.debug("Ya existe alarma activa/reconocida para evento {}, no se crea otra", deteccion.getEventoId());
+            LOG.info(">>> Ya existe alarma activa/reconocida, no se crea otra");
             return null;
         }
 
