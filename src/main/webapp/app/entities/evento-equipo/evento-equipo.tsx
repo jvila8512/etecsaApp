@@ -255,6 +255,7 @@ export const EventoEquipo = () => {
       tipoRegistro: formValues.tipoRegistro,
       tipoDato: formValues.tipoDato,
       esEscribible: formValues.esEscribible,
+      habilitarAlarma: formValues.habilitarAlarma,
       intervaloLectura: formValues.intervaloLectura ? Number(formValues.intervaloLectura) : null,
       umbralAlerta: formValues.umbralAlerta ? Number(formValues.umbralAlerta) : null,
       severidadAlerta: formValues.severidadAlerta || null,
@@ -397,18 +398,20 @@ export const EventoEquipo = () => {
           ) : (
             <form key={formKey}>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-                <TextField
-                  label={translate('appsupervisorApp.eventoEquipo.nombreVariable')}
-                  id="evento-equipo-nombreVariable"
-                  name="nombreVariable"
-                  value={formValues.nombreVariable}
-                  onChange={handleInputChange}
-                  fullWidth
-                  required
-                  error={!formValues.nombreVariable}
-                  helperText={!formValues.nombreVariable ? translate('entity.validation.required') : 'Nombre de la variable'}
-                />
+                {/* Nombre Variable + Dirección Modbus juntos */}
                 <Box sx={{ display: 'flex', gap: 2 }}>
+                  <TextField
+                    label={translate('appsupervisorApp.eventoEquipo.nombreVariable')}
+                    id="evento-equipo-nombreVariable"
+                    name="nombreVariable"
+                    value={formValues.nombreVariable}
+                    onChange={handleInputChange}
+                    fullWidth
+                    required
+                    error={!formValues.nombreVariable}
+                    helperText={!formValues.nombreVariable ? translate('entity.validation.required') : 'Nombre de la variable'}
+                    InputLabelProps={{ shrink: true }}
+                  />
                   <TextField
                     label="Dirección Modbus"
                     id="evento-equipo-direccionModbus"
@@ -419,27 +422,21 @@ export const EventoEquipo = () => {
                     fullWidth
                     required
                     error={!formValues.direccionModbus}
-                  />
-                  <TextField
-                    label="Intervalo Lectura (seg)"
-                    id="evento-equipo-intervaloLectura"
-                    name="intervaloLectura"
-                    type="number"
-                    value={formValues.intervaloLectura}
-                    onChange={handleInputChange}
-                    fullWidth
-                    placeholder="Ej: 5"
+                    InputLabelProps={{ shrink: true }}
                   />
                 </Box>
+                {/* Tipo Registro + Tipo Dato */}
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <TextField
                     select
-                    label="Tipo Registro"
+                    label={translate(`appsupervisorApp.eventoEquipo.tipoRegistro`)}
                     id="evento-equipo-tipoRegistro"
                     name="tipoRegistro"
                     value={formValues.tipoRegistro}
                     onChange={handleTipoRegistroChange}
                     fullWidth
+                    variant="outlined"
+                    InputLabelProps={{ shrink: true }}
                     SelectProps={{ native: true }}
                   >
                     {tipoRegistroValues.map(tipoRegistro => (
@@ -450,13 +447,16 @@ export const EventoEquipo = () => {
                   </TextField>
                   <TextField
                     select
-                    label="Tipo Dato"
+                    label={translate(`appsupervisorApp.eventoEquipo.tipoDato`)}
                     id="evento-equipo-tipoDato"
                     name="tipoDato"
                     value={formValues.tipoDato}
-                    onChange={handleInputChange}
                     fullWidth
+                    variant="outlined"
+                    disabled
+                    InputLabelProps={{ shrink: true }}
                     SelectProps={{ native: true }}
+                    helperText="Se completa automáticamente según Tipo de Registro"
                   >
                     {tipoDatoValues.map(tipoDato => (
                       <option value={tipoDato} key={tipoDato}>
@@ -465,6 +465,7 @@ export const EventoEquipo = () => {
                     ))}
                   </TextField>
                 </Box>
+                {/* Equipo + Plantilla */}
                 <Box sx={{ display: 'flex', gap: 2 }}>
                   <TextField
                     select
@@ -474,6 +475,8 @@ export const EventoEquipo = () => {
                     value={formValues.equipo}
                     onChange={handleInputChange}
                     fullWidth
+                    variant="outlined"
+                    InputLabelProps={{ shrink: true }}
                     SelectProps={{ native: true }}
                   >
                     <option value="">-- Seleccionar --</option>
@@ -491,6 +494,8 @@ export const EventoEquipo = () => {
                     value={formValues.plantilla}
                     onChange={handleInputChange}
                     fullWidth
+                    variant="outlined"
+                    InputLabelProps={{ shrink: true }}
                     SelectProps={{ native: true }}
                   >
                     <option value="">-- Seleccionar --</option>
@@ -501,6 +506,7 @@ export const EventoEquipo = () => {
                     ))}
                   </TextField>
                 </Box>
+                {/* Alerta de configuración */}
                 <Alert severity="warning" sx={{ mt: 1 }}>
                   <AlertTitle>Configuración de Alarmas</AlertTitle>
                   <Typography variant="body2" component="div">
@@ -517,6 +523,7 @@ export const EventoEquipo = () => {
                     </ul>
                   </Typography>
                 </Alert>
+                {/* Umbral de Alerta */}
                 <TextField
                   label="Umbral de Alerta"
                   id="evento-equipo-umbralAlerta"
@@ -525,8 +532,9 @@ export const EventoEquipo = () => {
                   value={formValues.umbralAlerta}
                   onChange={handleInputChange}
                   fullWidth
-                  placeholder="Vacio = sin alarma. 1 = booleano. Numero = umbral numerico"
+                  placeholder="Vacío = sin alarma. 1 = booleano. Número = umbral numérico"
                   helperText="Configure para activar alarmas"
+                  InputLabelProps={{ shrink: true }}
                   sx={{ mb: 2 }}
                 />
                 {/* Habilitar Alarma - Checkbox destacado */}
@@ -552,9 +560,10 @@ export const EventoEquipo = () => {
                     style={{ width: 18, height: 18 }}
                   />
                   <label htmlFor="evento-equipo-habilitarAlarma" style={{ fontWeight: 600 }}>
-                    Habilitar Alarma Automatica {formValues.esEscribible && '(bloqueado - es escribible)'}
+                    Habilitar Alarma Automática {formValues.esEscribible && '(bloqueado - es escribible)'}
                   </label>
                 </Box>
+                {/* Severidad de Alerta */}
                 <TextField
                   select
                   label="Severidad de Alerta"
@@ -563,8 +572,8 @@ export const EventoEquipo = () => {
                   value={formValues.severidadAlerta}
                   onChange={handleInputChange}
                   fullWidth
+                  variant="outlined"
                   SelectProps={{ native: true }}
-                  sx={{ mb: 2, mt: 2 }}
                 >
                   <option value="">-- Por defecto --</option>
                   {severidadValues.map(sev => (
@@ -573,6 +582,7 @@ export const EventoEquipo = () => {
                     </option>
                   ))}
                 </TextField>
+                {/* Escribible */}
                 <Box
                   sx={{
                     display: 'flex',
@@ -595,6 +605,8 @@ export const EventoEquipo = () => {
                     Escribible {formValues.habilitarAlarma && '(bloqueado - alarma es solo lectura)'}
                   </label>
                 </Box>
+                {/* Intervalo de lectura - oculto al final con ayuda */}
+                <input type="hidden" name="intervaloLectura" value={formValues.intervaloLectura} />
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
                   <Button onClick={hideDialogNuevo}>Cancelar</Button>
                   <Button

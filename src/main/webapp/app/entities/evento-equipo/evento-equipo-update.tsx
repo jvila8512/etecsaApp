@@ -4,7 +4,6 @@ import { Translate, ValidatedField, ValidatedForm, isNumber, translate } from 'r
 import { Box, Button, Grid, Paper, Typography, Tooltip } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import SaveIcon from '@mui/icons-material/Save';
-import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 
 import { convertDateTimeFromServer, convertDateTimeToServer, displayDefaultDateTime } from 'app/shared/util/date-utils';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
@@ -13,6 +12,7 @@ import { getEntities as getEquipos } from 'app/entities/equipo/equipo.reducer';
 import { getEntities as getEventoPlantillas } from 'app/entities/evento-plantilla/evento-plantilla.reducer';
 import { TipoRegistro } from 'app/shared/model/enumerations/tipo-registro.model';
 import { TipoDato } from 'app/shared/model/enumerations/tipo-dato.model';
+import { Severidad } from 'app/shared/model/enumerations/severidad.model';
 import { createEntity, getEntity, reset, updateEntity } from './evento-equipo.reducer';
 
 export const EventoEquipoUpdate = () => {
@@ -31,6 +31,7 @@ export const EventoEquipoUpdate = () => {
   const updateSuccess = useAppSelector(state => state.eventoEquipo.updateSuccess);
   const tipoRegistroValues = Object.keys(TipoRegistro);
   const tipoDatoValues = Object.keys(TipoDato);
+  const severidadValues = Object.keys(Severidad);
 
   const handleClose = () => {
     navigate(`/evento-equipo${location.search}`);
@@ -90,6 +91,8 @@ export const EventoEquipoUpdate = () => {
       ? {
           timestampActualizacion: displayDefaultDateTime(),
           habilitarAlarma: false,
+          tipoRegistro: 'BIT_LOGICO_M',
+          tipoDato: 'BOOLEAN',
         }
       : {
           tipoRegistro: 'BIT_LOGICO_M',
@@ -100,6 +103,13 @@ export const EventoEquipoUpdate = () => {
           plantilla: eventoEquipoEntity?.plantilla?.id,
           habilitarAlarma: eventoEquipoEntity?.habilitarAlarma ?? false,
         };
+
+  // Mapping de TipoRegistro a TipoDato automático
+  const tipoRegistroToTipoDato: Record<string, string> = {
+    BIT_LOGICO_M: 'BOOLEAN',
+    PALABRA_MW: 'INT16',
+    PALABRA_DOBLE_MD: 'INT32',
+  };
 
   return (
     <Paper sx={{ p: 3 }}>
@@ -123,7 +133,8 @@ export const EventoEquipoUpdate = () => {
                 />
               </Grid>
             ) : null}
-            <Grid size={{ xs: 12 }}>
+            {/* Nombre Variable + Dirección Modbus juntos */}
+            <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.eventoEquipo.nombreVariable')}
                 id="evento-equipo-nombreVariable"
@@ -148,6 +159,7 @@ export const EventoEquipoUpdate = () => {
                 }}
               />
             </Grid>
+            {/* Tipo Registro + Tipo Dato (solo lectura) */}
             <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 label={translate('appsupervisorApp.eventoEquipo.tipoRegistro')}
@@ -170,6 +182,8 @@ export const EventoEquipoUpdate = () => {
                 name="tipoDato"
                 data-cy="tipoDato"
                 type="select"
+                disabled
+                helperText="Se completa automáticamente según Tipo de Registro"
               >
                 {tipoDatoValues.map(tipoDato => (
                   <option value={tipoDato} key={tipoDato}>
@@ -178,76 +192,7 @@ export const EventoEquipoUpdate = () => {
                 ))}
               </ValidatedField>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <ValidatedField
-                label={translate('appsupervisorApp.eventoEquipo.esEscribible')}
-                id="evento-equipo-esEscribible"
-                name="esEscribible"
-                data-cy="esEscribible"
-                type="checkbox"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <ValidatedField
-                label={translate('appsupervisorApp.eventoEquipo.valorNumerico')}
-                id="evento-equipo-valorNumerico"
-                name="valorNumerico"
-                data-cy="valorNumerico"
-                type="text"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <ValidatedField
-                label={translate('appsupervisorApp.eventoEquipo.valorBooleano')}
-                id="evento-equipo-valorBooleano"
-                name="valorBooleano"
-                data-cy="valorBooleano"
-                type="checkbox"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <ValidatedField
-                label={translate('appsupervisorApp.eventoEquipo.timestampActualizacion')}
-                id="evento-equipo-timestampActualizacion"
-                name="timestampActualizacion"
-                data-cy="timestampActualizacion"
-                type="datetime-local"
-                placeholder="YYYY-MM-DD HH:mm"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <ValidatedField
-                label={translate('appsupervisorApp.eventoEquipo.intervaloLectura')}
-                id="evento-equipo-intervaloLectura"
-                name="intervaloLectura"
-                data-cy="intervaloLectura"
-                type="text"
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}>
-              <ValidatedField
-                label={translate('appsupervisorApp.eventoEquipo.umbralAlerta')}
-                id="evento-equipo-umbralAlerta"
-                name="umbralAlerta"
-                data-cy="umbralAlerta"
-                type="text"
-              />
-            </Grid>
-            {/* Habilitar Alarma */}
-            <Grid size={{ xs: 12, sm: 6 }} sx={{ mt: 2, mb: 1, p: 2, bgcolor: '#fff3cd', borderRadius: 1 }}>
-              <Tooltip
-                title="Activar para que esta variable genere alarmas automaticas. Ejemplo: Puerta Abierta, Presion Alta, Temperatura, etc. Variables de control como Apagar Motor deben estar desmarcadas."
-                arrow
-              >
-                <ValidatedField
-                  id="evento-equipo-habilitarAlarma"
-                  name="habilitarAlarma"
-                  data-cy="habilitarAlarma"
-                  type="checkbox"
-                  label="Habilitar Alarma"
-                />
-              </Tooltip>
-            </Grid>
+            {/* Equipo + Plantilla */}
             <Grid size={{ xs: 12, sm: 6 }}>
               <ValidatedField
                 id="evento-equipo-equipo"
@@ -285,6 +230,92 @@ export const EventoEquipoUpdate = () => {
                     ))
                   : null}
               </ValidatedField>
+            </Grid>
+            {/* Umbral + Severidad */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.umbralAlerta')}
+                id="evento-equipo-umbralAlerta"
+                name="umbralAlerta"
+                data-cy="umbralAlerta"
+                type="text"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.severidadAlerta')}
+                id="evento-equipo-severidadAlerta"
+                name="severidadAlerta"
+                data-cy="severidadAlerta"
+                type="select"
+              >
+                <option value="">-- Por defecto --</option>
+                {severidadValues.map(sev => (
+                  <option value={sev} key={sev}>
+                    {sev}
+                  </option>
+                ))}
+              </ValidatedField>
+            </Grid>
+            {/* Habilitar Alarma */}
+            <Grid size={{ xs: 12, sm: 6 }} sx={{ mt: 2, mb: 1, p: 2, bgcolor: '#fff3cd', borderRadius: 1 }}>
+              <Tooltip
+                title="Activar para que esta variable genere alarmas automaticas. Ejemplo: Puerta Abierta, Presion Alta, Temperatura, etc. Variables de control como Apagar Motor deben estar desmarcadas."
+                arrow
+              >
+                <ValidatedField
+                  id="evento-equipo-habilitarAlarma"
+                  name="habilitarAlarma"
+                  data-cy="habilitarAlarma"
+                  type="checkbox"
+                  label="Habilitar Alarma"
+                />
+              </Tooltip>
+            </Grid>
+            {/* Escribible */}
+            <Grid size={{ xs: 12, sm: 6 }} sx={{ mt: 2, mb: 1, p: 2, bgcolor: '#e3f2fd', borderRadius: 1 }}>
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.esEscribible')}
+                id="evento-equipo-esEscribible"
+                name="esEscribible"
+                data-cy="esEscribible"
+                type="checkbox"
+              />
+            </Grid>
+            {/* Valor Numérico */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.valorNumerico')}
+                id="evento-equipo-valorNumerico"
+                name="valorNumerico"
+                data-cy="valorNumerico"
+                type="text"
+              />
+            </Grid>
+            {/* Valor Booleano */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.valorBooleano')}
+                id="evento-equipo-valorBooleano"
+                name="valorBooleano"
+                data-cy="valorBooleano"
+                type="checkbox"
+              />
+            </Grid>
+            {/* Timestamp */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <ValidatedField
+                label={translate('appsupervisorApp.eventoEquipo.timestampActualizacion')}
+                id="evento-equipo-timestampActualizacion"
+                name="timestampActualizacion"
+                data-cy="timestampActualizacion"
+                type="datetime-local"
+                placeholder="YYYY-MM-DD HH:mm"
+              />
+            </Grid>
+            {/* Intervalo de lectura - oculto con input hidden */}
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <input type="hidden" name="intervaloLectura" value={eventoEquipoEntity?.intervaloLectura || ''} />
             </Grid>
             <Grid size={{ xs: 12 }}>
               <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>

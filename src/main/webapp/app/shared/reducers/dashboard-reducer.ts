@@ -16,6 +16,7 @@ export interface DashboardEquipo {
     umbralAlerta: number | null;
     unidadMedida: string | null;
     timestampActualizacion: string | null;
+    habilitarAlarma: boolean | null;
   }>;
 }
 
@@ -48,73 +49,23 @@ export const DashboardSlice = createSlice({
       // Mantener cache de datos al desconectar
     },
     dashboardDataReceived(state, action: PayloadAction<{ equipos: DashboardEquipo[]; timestamp: number }>) {
-      console.warn('[REDUCER] dashboardDataReceived - equipos:', action.payload.equipos?.length);
-
-      // DEBUG: mostrar estado ANTES y DESPUÉS
-      const estadosAntes = state.equipos.map(e => `${e.id}:${e.estado}`).join(', ');
-
-      if (action.payload.equipos?.length > 0) {
-        action.payload.equipos.forEach((eq: DashboardEquipo) => {
-          console.warn(`[REDUCER] RECIBIDO Equipo ${eq.id} (${eq.nombre}): estado=${eq.estado}, variables=${eq.variables?.length ?? 0}`);
-        });
-      }
-
       // convert cualquier texto recibido a los tres valores canónicos
-      // el backend a veces antepone emojis/círculos y en ocasiones una lectura
-      // fallida genera "DESCONECTADO" aunque el equipo siga hablando.
       const normalizeEstado = (raw: string) => {
-        if (!raw) {
-          return raw;
-        }
+        if (!raw) return raw;
         if (raw.includes('DESCONECTADO')) return 'DESCONECTADO';
         if (raw.includes('OPERATIVO')) return 'OPERATIVO';
         if (raw.includes('ERROR')) return 'ERROR';
         return raw;
       };
 
-      // robustecer el filtro para ignorar cualquier parpadeo corto (ida y vuelta).
-      // PERMITE cambio inmediato a DESCONECTADO - no esperar 10 segundos
-      const THRESHOLD = 10000; // ms
-      const oldMap = new Map<number, string>();
-      state.equipos.forEach(e => oldMap.set(e.id, e.estado));
-
-      // crear mapa de variables previas (equipoId -> "dir-Tipo" -> variable)
-      const prevVarMap = new Map<number, Map<string, any>>();
-      state.equipos.forEach(e => {
-        const m = new Map<string, any>();
-        e.variables?.forEach(v => {
-          const key = `${e.id}-${v.dir}-${v.valorBooleano !== null ? 'B' : 'N'}`;
-          m.set(key, v);
-        });
-        prevVarMap.set(e.id, m);
-      });
-
-      // guardamos la última fecha recibida para cada equipo si hace falta
-      const lastTimestamps = new Map<number, number>();
-      // si tenemos lastUpdate previo, asignarlo a todos, después se sobrescribirá
-      if (state.lastUpdate !== null) {
-        const prev = state.lastUpdate; // ya es number debido al chequeo
-        state.equipos.forEach(e => lastTimestamps.set(e.id, prev));
-      }
-
-      // MERGE: actualizar solo los equipos del payload, mantener los demás
-      const payloadEquiposMap = new Map(action.payload.equipos.map(e => [e.id, e]));
       const now = Date.now();
 
-      console.warn('[REDUCER] Estados antes:', state.equipos.map(e => `${e.id}:${e.estado}`).join(', '));
-      console.warn('[REDUCER] Payload estados:', action.payload.equipos.map(e => `${e.id}:${e.estado}`).join(', '));
-
       state.equipos = state.equipos.map(existing => {
-        const incoming = payloadEquiposMap.get(existing.id);
+        const incoming = action.payload.equipos.find(e => e.id === existing.id);
         if (!incoming) return existing;
 
+        // Siempre actualizar el estado - sin filtros anti-parpadeo
         const nuevo = { ...incoming, estado: normalizeEstado(incoming.estado) };
-
-        // DEBUG: forzar actualización del estado
-        console.warn(`[REDUCER] Equipo ${existing.id}: anterior=${existing.estado}, incoming=${incoming.estado}, nuevo=${nuevo.estado}`);
-
-        // NO aplicar filtro anti-parpadeo - siempre actualizar el estado
-        // El filtro causaba que no se actualice inmediatamente
 
         const pending = state.pendingWrites ?? {};
         Object.keys(pending).forEach(k => {
@@ -123,22 +74,22 @@ export const DashboardSlice = createSlice({
           }
         });
 
+        // Fusionar variables si hay nuevas
         if (Array.isArray(incoming.variables) && incoming.variables.length > 0) {
-          // Crear mapa de variables existentes por dir+tipo
+          // Usar key composta: dir + tipo (B o N) para mantener booleanos y numéricos separados
           const existingVarsMap = new Map<string, any>();
           existing.variables?.forEach(v => {
-            const key = `${existing.id}-${v.dir}-${v.valorBooleano !== null ? 'B' : 'N'}`;
+            const tipo = v.valorBooleano !== null ? 'B' : 'N';
+            const key = `${v.dir}-${tipo}`;
             existingVarsMap.set(key, v);
           });
 
-          // FUSIONAR: SIEMPRE mantener variables existentes + actualizar/agregar las del payload
           const mergedVarsMap = new Map(existingVarsMap);
 
           incoming.variables.forEach(v => {
-            const typeFlag = v.valorBooleano !== null ? 'B' : 'N';
-            const key = `${existing.id}-${v.dir}-${typeFlag}`;
+            const tipo = v.valorBooleano !== null ? 'B' : 'N';
+            const key = `${v.dir}-${tipo}`;
 
-            // Si hay escritura pendiente para esta variable, NO sobrescribir del PLC
             if (pending[key] && now - pending[key] < 5000) {
               const existingVar = existingVarsMap.get(key);
               if (existingVar) {
@@ -147,7 +98,24 @@ export const DashboardSlice = createSlice({
               }
             }
 
-            mergedVarsMap.set(key, v);
+            const existente = mergedVarsMap.get(key);
+            if (existente) {
+              mergedVarsMap.set(key, {
+                ...existente,
+                ...v,
+                valorBooleano: v.valorBooleano !== null ? v.valorBooleano : existente.valorBooleano,
+                valorNumerico: v.valorNumerico !== null ? v.valorNumerico : existente.valorNumerico,
+                id: v.id ?? existente.id,
+                nombreVariable: v.nombreVariable ?? existente.nombreVariable,
+                dir: v.dir ?? existente.dir,
+                esLectura: existente.esLectura,
+                umbralAlerta: v.umbralAlerta ?? existente.umbralAlerta,
+                unidadMedida: v.unidadMedida ?? existente.unidadMedida,
+                habilitarAlarma: v.habilitarAlarma ?? existente.habilitarAlarma,
+              });
+            } else {
+              mergedVarsMap.set(key, v);
+            }
           });
 
           nuevo.variables = Array.from(mergedVarsMap.values()).map((v, index) => ({
@@ -156,18 +124,18 @@ export const DashboardSlice = createSlice({
             esLectura: v.esLectura ?? true,
             umbralAlerta: v.umbralAlerta ?? null,
             unidadMedida: v.unidadMedida ?? null,
+            habilitarAlarma: v.habilitarAlarma ?? null,
           }));
 
           state.pendingWrites = pending;
         } else {
-          // Payload tiene variables vacías, MANTENER las existentes
           nuevo.variables = existing.variables;
         }
 
         return nuevo;
       });
 
-      // Agregar equipos nuevos
+      // Agregar equipos nuevos que no existen en el estado
       const existingIds = new Set(state.equipos.map(e => e.id));
       action.payload.equipos.forEach(incoming => {
         if (!existingIds.has(incoming.id)) {
@@ -180,46 +148,39 @@ export const DashboardSlice = createSlice({
               esLectura: v.esLectura ?? true,
               umbralAlerta: v.umbralAlerta ?? null,
               unidadMedida: v.unidadMedida ?? null,
+              habilitarAlarma: v.habilitarAlarma ?? null,
             })),
           });
         }
       });
 
-      // Debug: mostrar estado DESPUÉS de actualizar
-      console.warn('[REDUCER] ESTADOS DESPUÉS:', state.equipos.map(e => `${e.id}:${e.estado}`).join(', '));
-
-      // actualización normal
       state.lastUpdate = action.payload.timestamp;
       state.hasReceivedData = true;
     },
     // acción disparada cuando un comando de escritura fue exitoso
     dashboardVariableWritten(state, action: PayloadAction<{ equipoId: number; dir: number; value: boolean | number }>) {
       const { equipoId, dir, value } = action.payload;
-      // rebuild equipos array with updated variable, preserving immutability
       state.equipos = state.equipos.map(e => {
         if (e.id !== equipoId || !e.variables) return e;
         const newVars = e.variables.map(v => {
-          if (
-            v.dir === dir &&
-            ((typeof value === 'boolean' && v.valorBooleano !== null) || (typeof value === 'number' && v.valorNumerico !== null))
-          ) {
-            // create new variable object with updated value
-            return {
-              ...v,
-              valorBooleano: typeof value === 'boolean' ? value : v.valorBooleano,
-              valorNumerico: typeof value === 'number' ? value : v.valorNumerico,
-            };
+          if (v.dir === dir) {
+            const match =
+              (typeof value === 'boolean' && v.valorBooleano !== null) || (typeof value === 'number' && v.valorNumerico !== null);
+            if (match) {
+              return {
+                ...v,
+                valorBooleano: typeof value === 'boolean' ? value : v.valorBooleano,
+                valorNumerico: typeof value === 'number' ? value : v.valorNumerico,
+              };
+            }
           }
           return v;
         });
-        return {
-          ...e,
-          variables: newVars,
-        };
+        return { ...e, variables: newVars };
       });
-      // marcar esta variable como escrita recientemente para evitar sobrescrituras
+      // Usar key composta: dir + tipo
       const typeFlag = typeof value === 'boolean' ? 'B' : 'N';
-      const key = `${equipoId}-${dir}-${typeFlag}`;
+      const key = `${dir}-${typeFlag}`;
       if (!state.pendingWrites) state.pendingWrites = {};
       state.pendingWrites[key] = Date.now();
     },

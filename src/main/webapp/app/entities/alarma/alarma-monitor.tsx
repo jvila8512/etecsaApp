@@ -36,7 +36,6 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import CheckIcon from '@mui/icons-material/Check';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
-import { receiveDashboardActualizaciones } from 'app/websocket/dashboard-websocket';
 import {
   connectAlarmas,
   disconnectAlarmas,
@@ -45,7 +44,7 @@ import {
   receiveAlarmaResuelta,
 } from 'app/websocket/alarma-websocket';
 import { getDashboardEquipos } from 'app/shared/reducers/dashboard-reducer';
-import { getEntities as getAlarmas, reconocerAlarma, finalizarAlarma, procesarDeteccion, AlarmaDeteccion } from './alarma.reducer';
+import { getEntities as getAlarmas, reconocerAlarma, finalizarAlarma } from './alarma.reducer';
 import { IAlarma } from 'app/shared/model/alarma.model';
 import AlarmSound from '../alarm-sound/alarm-sound';
 
@@ -86,10 +85,7 @@ export const AlarmaMonitor = () => {
   const [successMsg, setSuccessMsg] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  const procesamientoRef = useRef<boolean>(false);
-  const lastProcessedRef = useRef<Map<string, number>>(new Map());
   const [refreshKey, setRefreshKey] = useState(0);
-  const pendingAlarmsRef = useRef<Set<number>>(new Set());
 
   // Combinar alarmas del backend con las nuevas que aún no están en el estado Redux
   const todasLasAlarmas = useMemo(() => {
@@ -103,148 +99,43 @@ export const AlarmaMonitor = () => {
   const hasUnacknowledged = alarmasActivas.some(a => a.estado === 'ACTIVA');
 
   // Crear mapa de valores actuales: eventoId -> boolean (esta en alarma?)
-  // Solo considera variables con habilitarAlarma = true
-  const valoresActualesMap = useMemo(() => {
-    const map = new Map<number, boolean>();
-    dashboardData.forEach(equipo => {
-      if (equipo.estado !== 'OPERATIVO') return;
-      equipo.variables?.forEach(variable => {
-        // Solo mostrar estado de alarma si tiene habilitarAlarma
-        if (!variable.habilitarAlarma) {
-          return;
-        }
-        let isAlarm = false;
-        if (variable.valorBooleano === true && variable.umbralAlerta != null) {
-          isAlarm = true;
-        } else if (variable.valorNumerico != null && variable.umbralAlerta != null && variable.valorNumerico > variable.umbralAlerta) {
-          isAlarm = true;
-        }
-        map.set(variable.id, isAlarm);
-      });
+  // Usa ref para mantener valores anteriores cuando no vienen en el payload
+  const valoresActualesMapRef = useRef<Map<number, boolean>>(new Map());
+
+  // Actualizar el mapa cada vez que llegan nuevos datos
+  dashboardData.forEach(equipo => {
+    if (equipo.estado !== 'OPERATIVO') return;
+    equipo.variables?.forEach(variable => {
+      // Solo considerar variables con habilitarAlarma = true
+      if (!variable.habilitarAlarma) {
+        return;
+      }
+      let isAlarm = false;
+      if (variable.valorBooleano === true && variable.umbralAlerta != null) {
+        isAlarm = true;
+      } else if (variable.valorNumerico != null && variable.umbralAlerta != null && variable.valorNumerico > variable.umbralAlerta) {
+        isAlarm = true;
+      }
+      // Mantener el valor anterior si no hay datos nuevos
+      valoresActualesMapRef.current.set(variable.id, isAlarm);
     });
-    return map;
-  }, [dashboardData]);
+  });
 
   const loadAlarmas = useCallback(() => {
     dispatch(getAlarmas({ page: 0, size: 1000, sort: 'activatedAt,desc' }));
   }, [dispatch]);
 
+  // ============================================================
+  // NOTA: La detección de alarmas ahora es 100% en BACKEND
+  // PollingService detecta → AlarmaService procesa → WebSocket notifica
+  // El frontend SOLO recibe notificaciones por WebSocket y muestra
+  // Eliminada detección duplicada en frontend para evitar alarmas duplicadas/triplicadas
+  // ============================================================
+
   // Cargar alarmas solo una vez al montar
   useEffect(() => {
     loadAlarmas();
   }, []);
-
-  const procesarDeteccionAlarma = useCallback(
-    async (equipo: EquipoData, variable: VariableData, tipo: 'BOOLEAN' | 'NUMERICO') => {
-      const alarmKey = `${variable.id}`;
-      const now = Date.now();
-      const lastProcessed = lastProcessedRef.current.get(alarmKey) || 0;
-
-      if (now - lastProcessed < 500) {
-        return;
-      }
-
-      // Verificar si ya existe una alarma activa para este evento
-      const yaExiste = alarmasActivas.some(a => a.evento?.id === variable.id);
-      if (yaExiste) {
-        return;
-      }
-
-      // Verificar si ya hay una llamada pendiente para este evento
-      if (pendingAlarmsRef.current.has(variable.id)) {
-        return;
-      }
-
-      lastProcessedRef.current.set(alarmKey, now);
-      pendingAlarmsRef.current.add(variable.id);
-
-      const deteccion: AlarmaDeteccion = {
-        eventoId: variable.id,
-        esAlarma: true,
-        valorBooleano: tipo === 'BOOLEAN' ? (variable.valorBooleano ?? false) : undefined,
-        valorActual: tipo === 'NUMERICO' ? (variable.valorNumerico ?? 0) : undefined,
-        umbral: variable.umbralAlerta ?? undefined,
-        severidad: 'ALTA',
-        mensajeUsuario:
-          tipo === 'BOOLEAN'
-            ? `${variable.nombreVariable} en ${equipo.nombre} activado`
-            : `${variable.nombreVariable} en ${equipo.nombre} superó el umbral de ${variable.umbralAlerta}`,
-      };
-
-      try {
-        const result = await dispatch(procesarDeteccion(deteccion)).unwrap();
-        if (result) {
-          // Agregar inmediatamente al estado local
-          setNuevasAlarmas(prev => [result, ...prev]);
-          setLastNotification(result);
-          setNotificationOpen(true);
-          setRefreshKey(k => k + 1);
-          // Recargar en background para sincronizar con el estado Redux
-          loadAlarmas();
-        }
-      } catch (error) {
-        console.error('Error procesando detección:', error);
-      } finally {
-        pendingAlarmsRef.current.delete(variable.id);
-      }
-    },
-    [dispatch, loadAlarmas],
-  );
-
-  useEffect(() => {
-    let mounted = true;
-
-    // Suscripción a actualizaciones rápidas (solo para detectar alarmas)
-    const subActualizaciones = receiveDashboardActualizaciones().subscribe({
-      next({ equipos }) {
-        if (!mounted) return;
-        if (!equipos || procesamientoRef.current) return;
-
-        procesamientoRef.current = true;
-
-        const processVariables = async () => {
-          for (const equipo of equipos) {
-            if (!mounted || equipo.estado !== 'OPERATIVO') continue;
-
-            for (const variable of equipo.variables || []) {
-              if (!mounted) break;
-
-              let isAlarm = false;
-              let tipo: 'BOOLEAN' | 'NUMERICO' = 'NUMERICO';
-
-              if (variable.valorBooleano != null && variable.valorBooleano === true && variable.umbralAlerta != null) {
-                isAlarm = true;
-                tipo = 'BOOLEAN';
-              } else if (
-                variable.valorNumerico != null &&
-                variable.umbralAlerta != null &&
-                variable.valorNumerico > variable.umbralAlerta
-              ) {
-                isAlarm = true;
-                tipo = 'NUMERICO';
-              }
-
-              if (isAlarm) {
-                await procesarDeteccionAlarma(equipo, variable, tipo);
-              }
-            }
-          }
-          procesamientoRef.current = false;
-        };
-
-        processVariables();
-      },
-      error(err) {
-        console.error('Error WebSocket:', err);
-        procesamientoRef.current = false;
-      },
-    });
-
-    return () => {
-      mounted = false;
-      subActualizaciones.unsubscribe();
-    };
-  }, [procesarDeteccionAlarma]);
 
   // Suscripción a notificaciones WebSocket de alarmas
   useEffect(() => {
@@ -403,7 +294,7 @@ export const AlarmaMonitor = () => {
             <TableBody>
               {alarmasActivas.map(alarma => {
                 const eventoId = alarma.evento?.id;
-                const valorEnAlarma = eventoId ? valoresActualesMap.get(eventoId) : undefined;
+                const valorEnAlarma = eventoId ? valoresActualesMapRef.current.get(eventoId) : undefined;
                 const tieneDatos = valorEnAlarma !== undefined;
                 const valorNormalizado = valorEnAlarma === false;
 
