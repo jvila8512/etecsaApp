@@ -42,6 +42,8 @@ public class EventoEquipoDTO implements Serializable {
 
     private Double umbralAlerta;
 
+    private Boolean habilitarAlarma;
+
     private Severidad severidadAlerta;
 
     private EquipoDTO equipo;
@@ -136,6 +138,14 @@ public class EventoEquipoDTO implements Serializable {
         this.umbralAlerta = umbralAlerta;
     }
 
+    public Boolean getHabilitarAlarma() {
+        return habilitarAlarma;
+    }
+
+    public void setHabilitarAlarma(Boolean habilitarAlarma) {
+        this.habilitarAlarma = habilitarAlarma;
+    }
+
     public Severidad getSeveridadAlerta() {
         return severidadAlerta;
     }
@@ -196,6 +206,7 @@ public class EventoEquipoDTO implements Serializable {
             ", timestampActualizacion='" + getTimestampActualizacion() + "'" +
             ", intervaloLectura=" + getIntervaloLectura() +
             ", umbralAlerta=" + getUmbralAlerta() +
+            ", habilitarAlarma=" + getHabilitarAlarma() +
             ", equipo=" + getEquipo() +
             ", plantilla=" + getPlantilla() +
             "}";

@@ -232,6 +232,7 @@ public class AlarmaResource {
      */
     @PostMapping("/{id}/reconocer")
     public ResponseEntity<AlarmaDTO> reconocerAlarma(@PathVariable("id") Long id, Principal principal) {
+        LOG.info(">>> RECIBIDO: POST /api/alarmas/{}/reconocer", id);
         LOG.debug("REST request to reconocer alarma: {}", id);
         String username = principal != null ? principal.getName() : null;
         Optional<AlarmaDTO> result = alarmaService.reconocerAlarma(id, username);

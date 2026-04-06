@@ -38,4 +38,13 @@ public interface EquipoRepository
 
     @Query("select equipo from Equipo equipo left join fetch equipo.sitio where equipo.id =:id")
     Optional<Equipo> findOneWithToOneRelationships(@Param("id") Long id);
+
+    /**
+     * Devuelve solo equipos que tienen variables booleanas con alarmas habilitadas.
+     * Usado para el scheduler rápido de detección de alarmas (500ms).
+     */
+    @Query(
+        "SELECT DISTINCT e FROM Equipo e WHERE e.id IN (SELECT ev.equipo.id FROM EventoEquipo ev WHERE ev.habilitarAlarma = true AND ev.tipoRegistro = 'BIT_LOGICO_M')"
+    )
+    List<Equipo> findEquiposConAlarmasBooleanas();
 }

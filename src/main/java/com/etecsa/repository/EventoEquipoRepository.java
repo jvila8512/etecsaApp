@@ -46,7 +46,9 @@ public interface EventoEquipoRepository extends JpaRepository<EventoEquipo, Long
      */
     List<EventoEquipo> findByEquipoIdOrderByTimestampActualizacionDesc(Long equipoId);
 
-    @Query("SELECT ee FROM EventoEquipo ee JOIN FETCH ee.plantilla WHERE ee.equipo.id = :equipoId ORDER BY ee.timestampActualizacion DESC")
+    @Query(
+        "SELECT ee FROM EventoEquipo ee JOIN FETCH ee.plantilla JOIN FETCH ee.equipo WHERE ee.equipo.id = :equipoId ORDER BY ee.timestampActualizacion DESC"
+    )
     List<EventoEquipo> findByEquipoIdWithPlantilla(@Param("equipoId") Long equipoId);
 
     /**

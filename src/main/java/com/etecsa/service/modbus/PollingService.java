@@ -314,38 +314,65 @@ public class PollingService {
      */
     private void detectarAlarma(EventoEquipo ev, Boolean valorBooleano, Double valorNumerico) {
         // Solo procesar si tiene habilitadas las alarmas
+        LOG.info(
+            ">>> DETECTAR ALARMA: variable={}, habilitarAlarma={}, umbral={}, bool={}, num={}",
+            ev.getNombreVariable(),
+            ev.getHabilitarAlarma(),
+            ev.getUmbralAlerta(),
+            valorBooleano,
+            valorNumerico
+        );
+
         if (ev.getHabilitarAlarma() == null || !ev.getHabilitarAlarma()) {
+            LOG.info(">>> RETORNO: habilitarAlarma es null o false");
             return;
         }
 
-        // Solo procesar si tiene umbral configurado
-        if (ev.getUmbralAlerta() == null) {
+        // Solo procesar si tiene umbral configurado (para numeric)
+        // Boolean no necesita umbral - se activa cuando valor=true
+        Boolean esBooleano = valorBooleano != null;
+        LOG.info(">>> DETECTAR: esBooleano={}", esBooleano);
+        if (!esBooleano && ev.getUmbralAlerta() == null) {
+            LOG.info(">>> RETORNO: numérica sin umbral");
             return;
         }
 
         // Evitar detecciones muy seguidas (cada 1 segundo maximo)
         long now = System.currentTimeMillis();
         Long lastCheck = lastAlarmCheck.get(ev.getId());
+        LOG.info(">>> DETECTAR: lastCheck={}, now={}, diff={}", lastCheck, now, lastCheck != null ? (now - lastCheck) : "N/A");
         if (lastCheck != null && (now - lastCheck) < 1000) {
+            LOG.info(">>> RETORNO: throttle (diff < 1000ms)");
             return;
         }
         lastAlarmCheck.put(ev.getId(), now);
 
+        LOG.info(">>> PASÓ THROTTLE, entrando en detección de alarma");
+
         boolean esAlarma = false;
 
         // Boolean: alarma si true (puerta abierta, alarma activada, etc.)
+        LOG.info(">>> DEBUG BOOLEANA: valorBooleano={}, esBooleano={}", valorBooleano, esBooleano);
         if (valorBooleano != null && valorBooleano) {
             esAlarma = true;
-            LOG.info(">>> ALARMA BOOLEANA: {} en equipo {}", ev.getNombreVariable(), ev.getEquipo().getNombre());
+            LOG.info(
+                ">>> ALARMA BOOLEANA: {} en equipo {}, umbral={}",
+                ev.getNombreVariable(),
+                ev.getEquipo().getNombre(),
+                ev.getUmbralAlerta()
+            );
         }
         // Numérica: alarma si valor > umbral
-        else if (valorNumerico != null && valorNumerico > ev.getUmbralAlerta()) {
+        else if (valorNumerico != null && ev.getUmbralAlerta() != null && valorNumerico > ev.getUmbralAlerta()) {
             esAlarma = true;
             LOG.info(">>> ALARMA NUMERICA: {}={} > umbral={}", ev.getNombreVariable(), valorNumerico, ev.getUmbralAlerta());
         }
 
+        LOG.info(">>> RESULTADO DETECCION: esAlarma={}", esAlarma);
+
         if (esAlarma) {
             try {
+                LOG.info(">>> CREANDO ALARMA: eventoId={}, valorBooleano={}", ev.getId(), valorBooleano);
                 AlarmaDeteccionDTO deteccion = new AlarmaDeteccionDTO();
                 deteccion.setEventoId(ev.getId());
                 deteccion.setEsAlarma(true);
@@ -356,7 +383,7 @@ public class PollingService {
 
                 alarmaService.procesarDeteccion(deteccion);
             } catch (Exception e) {
-                LOG.error("Error creando alarma: {}", e.getMessage());
+                LOG.error("Error creando alarma: {}", e.getMessage(), e);
             }
         }
     }

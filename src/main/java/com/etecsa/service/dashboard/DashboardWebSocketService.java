@@ -18,6 +18,9 @@ import org.springframework.stereotype.Service;
  * Servicio que envía el estado de los equipos al tópico /topic/dashboard.
  *
  * Dos tipos de envío:
+ * - Alarmas booleanas: cada 500ms (detección instantánea)
+ * - Estado y variables: cada 2 segundos (estable, sin cambios frecuentes)
+ *
  * 1. Dashboard completo: envía TODOS los equipos con TODAS las variables (para la vista)
  * 2. Actualizaciones rápidas: según intervalos, para detección de alarmas
  *
@@ -81,11 +84,19 @@ public class DashboardWebSocketService {
      * - Equipos críticos: cada 6 ticks (3s)
      * - Otros: según configurado
      */
-    @Scheduled(fixedRate = 500) // Cada 500ms
+    @Scheduled(fixedRate = 500) // Cada 500ms - SOLO equipos con alarmas booleanas
     public void enviarActualizacionesRapidas() {
-        log.error("######################### INICIO ACTUALIZACIONES RAPIDAS #########################");
+        log.debug(">>> INICIO ACTUALIZACIONES RAPIDAS (500ms) - solo alarmas booleanas");
         try {
-            List<Equipo> equipos = equipoRepository.findAll();
+            // Solo equipos con variables booleanas con alarmas = mucho más eficiente
+            List<Equipo> equipos = equipoRepository.findEquiposConAlarmasBooleanas();
+
+            if (equipos.isEmpty()) {
+                log.debug(">>> No hay equipos con alarmas booleanas, saltando...");
+                return;
+            }
+
+            log.debug(">>> Procesando {} equipos con alarmas booleanas", equipos.size());
 
             List<CompletableFuture<DashboardEquipoDTO>> futures = equipos
                 .stream()
@@ -106,6 +117,38 @@ public class DashboardWebSocketService {
             });
         } catch (Exception e) {
             log.error("Error en actualizaciones rápidas: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Envía estado del equipo cada 2 segundos (lento y estable).
+     * Solo lee estado y variables numéricas, sin detección de alarmas booleanas.
+     * Esto evita los cambios frecuentes DESCONECTADO/CONNECTED.
+     */
+    @Scheduled(fixedRate = 2000) // Cada 2 segundos
+    public void enviarEstadoEquipos() {
+        try {
+            List<Equipo> equipos = equipoRepository.findAll();
+
+            List<CompletableFuture<DashboardEquipoDTO>> futures = equipos
+                .stream()
+                .map(eq -> pollingService.procesarEquipo(eq, true, false)) // false = NO detectar alarmas (ya se hace en el rápido)
+                .collect(Collectors.toList());
+
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).thenAccept(v -> {
+                List<DashboardEquipoDTO> resultados = futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
+
+                if (!resultados.isEmpty()) {
+                    DashboardDTO dto = new DashboardDTO();
+                    dto.setTimestamp(System.currentTimeMillis());
+                    dto.setEquipos(resultados);
+
+                    messagingTemplate.convertAndSend("/topic/dashboard/estado", dto);
+                    log.debug("Estado de equipos enviado (2s): {} equipos", resultados.size());
+                }
+            });
+        } catch (Exception e) {
+            log.error("Error enviando estado de equipos: {}", e.getMessage());
         }
     }
 }

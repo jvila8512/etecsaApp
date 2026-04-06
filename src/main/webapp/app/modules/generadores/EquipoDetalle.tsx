@@ -76,7 +76,7 @@ const calcPct = (val: number | null | undefined): number => {
 };
 
 // ══════════════════════════════════════════════════════════
-//  TARJETA BIT
+//  TARJETA BIT (Dise�o mejorado)
 // ══════════════════════════════════════════════════════════
 const BitCard: React.FC<{
   variable: WsVariable;
@@ -89,40 +89,55 @@ const BitCard: React.FC<{
   return (
     <Card
       sx={{
-        borderLeft: `4px solid ${isOn ? '#22c55e' : '#cbd5e1'}`,
-        transition: 'border-color 0.2s',
+        borderLeft: `5px solid ${isOn ? '#22c55e' : '#94a3b8'}`,
+        background: isOn ? 'linear-gradient(135deg, #f0fdf4 0%, #fff 100%)' : 'linear-gradient(135deg, #f8fafc 0%, #fff 100%)',
+        height: '100%',
+        minHeight: 120,
+        transition: 'all 0.2s ease',
+        '&:hover': {
+          transform: 'translateY(-2px)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        },
       }}
     >
-      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-          <Box>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {variable.nombreVariable}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-                BOOLEAN
+      <CardContent
+        sx={{ p: 2, '&:last-child': { pb: 2 }, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+      >
+        <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 700, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              >
+                {variable.nombreVariable}
               </Typography>
-              {escribible && <Chip label="WRITE" size="small" color="info" sx={{ height: 18, fontSize: '0.65rem' }} />}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: '0.65rem' }}>
+                  DIR: {variable.dir}
+                </Typography>
+                {escribible && <Chip label="WR" size="small" color="warning" sx={{ height: 16, fontSize: '0.6rem', fontWeight: 700 }} />}
+              </Box>
             </Box>
+            <Chip
+              icon={isOn ? <CheckCircleIcon sx={{ fontSize: 16 }} /> : <CircleIcon sx={{ fontSize: 16 }} />}
+              label={isOn ? 'ON' : 'OFF'}
+              color={isOn ? 'success' : 'default'}
+              size="small"
+              sx={{ fontWeight: 700, minWidth: 50, justifyContent: 'center' }}
+            />
           </Box>
-          <Chip
-            icon={isOn ? <CheckCircleIcon sx={{ fontSize: 14 }} /> : <CircleIcon sx={{ fontSize: 14 }} />}
-            label={isOn ? 'ON' : 'OFF'}
-            color={isOn ? 'success' : 'error'}
-            size="small"
-            sx={{ fontWeight: 600 }}
-          />
         </Box>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-          <Typography variant="caption" color="text.secondary">
-            {escribible ? 'Accionable' : 'Solo lectura'}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1, borderTop: '1px solid #e2e8f0' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+            {escribible ? 'Control' : 'Monitoreo'}
           </Typography>
           <Switch
             checked={isOn}
             disabled={!escribible || isWriting}
             onChange={e => escribible && onToggle(variable.nombreVariable, variable.dir, e.target.checked)}
             size="small"
+            color="success"
           />
         </Box>
       </CardContent>
@@ -131,7 +146,7 @@ const BitCard: React.FC<{
 };
 
 // ══════════════════════════════════════════════════════════
-//  TARJETA REGISTRO NUMÉRICO
+//  TARJETA REGISTRO NUMÉRICO (Dise�o mejorado)
 // ══════════════════════════════════════════════════════════
 const RegCard: React.FC<{ variable: WsVariable }> = ({ variable }) => {
   const val = variable.valorNumerico;
@@ -139,53 +154,77 @@ const RegCard: React.FC<{ variable: WsVariable }> = ({ variable }) => {
   const showKnob = val !== null && val !== undefined && variable.unidadMedida === '%';
 
   return (
-    <Card sx={{ borderLeft: '4px solid #3b82f6' }}>
-      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-          <Box>
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {variable.nombreVariable}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-              NUMÉRICO
-            </Typography>
-          </Box>
-          {showKnob && (
-            <Box sx={{ position: 'relative', width: 48, height: 48 }}>
-              <CircularProgress variant="determinate" value={pct} size={48} thickness={4} sx={{ color: '#3b82f6' }} />
-              <Box
-                sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  bottom: 0,
-                  right: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
+    <Card
+      sx={{
+        borderLeft: '5px solid #3b82f6',
+        background: 'linear-gradient(135deg, #eff6ff 0%, #fff 100%)',
+        height: '100%',
+        minHeight: 120,
+        transition: 'all 0.2s ease',
+        '&:hover': {
+          transform: 'translateY(-2px)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        },
+      }}
+    >
+      <CardContent
+        sx={{ p: 2, '&:last-child': { pb: 2 }, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+      >
+        <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 700, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
               >
-                <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.65rem' }}>
-                  {pct}%
+                {variable.nombreVariable}
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: '0.65rem' }}>
+                  DIR: {variable.dir}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: '0.65rem' }}>
+                  {variable.unidadMedida || ''}
                 </Typography>
               </Box>
             </Box>
-          )}
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mb: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700, fontFamily: 'monospace', lineHeight: 1 }}>
-            {fmtNumerico(val)}
-          </Typography>
-          {variable.unidadMedida && (
-            <Typography variant="body2" color="text.secondary">
-              {variable.unidadMedida}
+            {showKnob && (
+              <Box sx={{ position: 'relative', width: 48, height: 48 }}>
+                <CircularProgress variant="determinate" value={pct} size={48} thickness={4} sx={{ color: '#3b82f6' }} />
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    bottom: 0,
+                    right: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.65rem' }}>
+                    {pct}%
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, mb: 1 }}>
+            <Typography variant="h5" sx={{ fontWeight: 800, fontFamily: 'monospace', lineHeight: 1, color: '#1e40af' }}>
+              {fmtNumerico(val)}
             </Typography>
-          )}
+            {variable.unidadMedida && (
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                {variable.unidadMedida}
+              </Typography>
+            )}
+          </Box>
         </Box>
         <LinearProgress
           variant="determinate"
           value={pct}
-          sx={{ height: 4, borderRadius: 2, bgcolor: '#e2e8f0', '& .MuiLinearProgress-bar': { bgcolor: '#3b82f6' } }}
+          sx={{ height: 6, borderRadius: 3, bgcolor: '#e2e8f0', '& .MuiLinearProgress-bar': { bgcolor: '#3b82f6', borderRadius: 3 } }}
         />
       </CardContent>
     </Card>
@@ -193,7 +232,7 @@ const RegCard: React.FC<{ variable: WsVariable }> = ({ variable }) => {
 };
 
 // ══════════════════════════════════════════════════════════
-//  TARJETA ESCRITURA
+//  TARJETA ESCRITURA (Dise�o mejorado)
 // ══════════════════════════════════════════════════════════
 const WriteCard: React.FC<{
   variable: WsVariable;
@@ -205,37 +244,56 @@ const WriteCard: React.FC<{
   return (
     <Card
       sx={{
-        borderLeft: `4px solid ${isLoading ? '#f59e0b' : '#3b82f6'}`,
-        opacity: isLoading ? 0.7 : 1,
-        transition: 'opacity 0.2s',
+        borderLeft: `5px solid ${isLoading ? '#f59e0b' : '#f97316'}`,
+        background: isLoading ? 'linear-gradient(135deg, #fffbeb 0%, #fff 100%)' : 'linear-gradient(135deg, #fff7ed 0%, #fff 100%)',
+        height: '100%',
+        minHeight: 120,
+        transition: 'all 0.2s ease',
+        '&:hover': {
+          transform: 'translateY(-2px)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        },
       }}
     >
-      <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-        <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
-          {variable.nombreVariable}
-        </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
-          ESCRITURA · {variable.unidadMedida ?? '---'}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
-          <TextField
-            size="small"
-            type="number"
-            value={inputVal}
-            onChange={e => !isLoading && setInputVal(Number(e.target.value))}
-            disabled={isLoading}
-            placeholder="Valor..."
-            sx={{ flex: 1, '& input': { fontFamily: 'monospace', fontSize: '0.85rem' } }}
-          />
-          <Button
-            variant="contained"
-            size="small"
-            disabled={isLoading}
-            onClick={() => onWrite(variable.nombreVariable, variable.dir, inputVal)}
-            sx={{ minWidth: 40 }}
-          >
-            {isLoading ? <CircularProgress size={18} color="inherit" /> : <SendIcon fontSize="small" />}
-          </Button>
+      <CardContent
+        sx={{ p: 2, '&:last-child': { pb: 2 }, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+      >
+        <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 700, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              >
+                {variable.nombreVariable}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontFamily: 'monospace', fontSize: '0.65rem' }}>
+                DIR: {variable.dir} · {variable.unidadMedida || '---'}
+              </Typography>
+            </Box>
+            <Chip label="WR" size="small" color="warning" sx={{ fontWeight: 700, fontSize: '0.65rem' }} />
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <TextField
+              size="small"
+              type="number"
+              value={inputVal}
+              onChange={e => !isLoading && setInputVal(Number(e.target.value))}
+              disabled={isLoading}
+              placeholder="Valor..."
+              fullWidth
+              sx={{ '& input': { fontFamily: 'monospace', fontSize: '1rem', fontWeight: 600, textAlign: 'center' } }}
+            />
+            <Button
+              variant="contained"
+              size="small"
+              disabled={isLoading}
+              onClick={() => onWrite(variable.nombreVariable, variable.dir, inputVal)}
+              sx={{ minWidth: 50, backgroundColor: '#f97316', '&:hover': { backgroundColor: '#ea580c' } }}
+            >
+              {isLoading ? <CircularProgress size={18} color="inherit" /> : <SendIcon fontSize="small" />}
+            </Button>
+          </Box>
         </Box>
       </CardContent>
     </Card>

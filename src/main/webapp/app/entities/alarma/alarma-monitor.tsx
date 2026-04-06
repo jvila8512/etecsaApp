@@ -158,6 +158,10 @@ export const AlarmaMonitor = () => {
 
     const subReconocida = receiveAlarmaReconocida().subscribe({
       next(alarma: IAlarma) {
+        // Actualizar la alarma en el estado local (nuevasAlarmas)
+        setNuevasAlarmas(prev => {
+          return prev.map(a => (a.id === alarma.id ? { ...a, estado: 'RECONOCIDA' } : a));
+        });
         setSuccessMsg(`Alarma reconocida: ${alarma.descripcion || alarma.evento?.nombreVariable}`);
         setShowSuccessMsg(true);
         loadAlarmas();
@@ -193,9 +197,12 @@ export const AlarmaMonitor = () => {
 
     try {
       await dispatch(reconocerAlarma(selectedAlarm.id)).unwrap();
+      // Actualizar localmente SIN recargar inmediatamente para evitar parpadeo
+      setNuevasAlarmas(prev => prev.map(a => (a.id === selectedAlarm.id ? { ...a, estado: 'RECONOCIDA' } : a)));
       setSuccessMsg(`Alarma reconocida: ${selectedAlarm.descripcion || selectedAlarm.evento?.nombreVariable}`);
       setShowSuccessMsg(true);
-      loadAlarmas();
+      // Recargar después de un pequeño delay
+      setTimeout(() => loadAlarmas(), 500);
     } catch (error) {
       console.error('Error reconociendo alarma:', error);
     }

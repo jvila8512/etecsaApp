@@ -50,6 +50,10 @@ public class ModBusService {
     private static final int DEFAULT_PORT = 502;
     private static final int DEFAULT_UNIT_ID = 255;
 
+    // ✅ Delay entre intentos de conexión para evitar saturar el PLC
+    private static final long MIN_CONNECT_INTERVAL_MS = 3000; // 3 segundos entre intentos (reducido de 10s)
+    private final ConcurrentHashMap<String, Long> lastConnectAttempt = new ConcurrentHashMap<>();
+
     private final ConcurrentHashMap<String, ModbusTcpClient> clients = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ConnectionInfo> connectionInfo = new ConcurrentHashMap<>();
 
@@ -76,11 +80,30 @@ public class ModBusService {
     /**
      * Conectar al equipo.
      * REUTILIZA el cliente existente si ya hay uno para evitar multiplicar conexiones al PLC.
+     * IMPLEMENTA delay entre intentos para no saturar el PLC.
      */
     public boolean connectToGenerator(String generatorId, String host, int port, int unitId) {
         log.info(">>> connectToGenerator: {} → {}:{}:{}", generatorId, host, port, unitId);
 
         try {
+            // ✅ Verificar delay entre intentos de conexión
+            Long lastAttempt = lastConnectAttempt.get(generatorId);
+            long now = System.currentTimeMillis();
+            if (lastAttempt != null && (now - lastAttempt) < MIN_CONNECT_INTERVAL_MS) {
+                // Demasiado pronto para intentar de nuevo
+                // Solo mantener estado conectado si el último intento fue exitoso
+                Boolean prevState = connectedState.get(generatorId);
+                if (prevState != null && prevState) {
+                    log.debug(">>> Conexión reciente exitosa, manteniendo estado conectado para {}", generatorId);
+                    return true;
+                }
+                // El último intento falló, necesitamos reintentar
+                log.debug(">>> Conexión reciente falló, permitiendo reintento para {}", generatorId);
+                // No retornar, continuar para reintentar
+            } else {
+                lastConnectAttempt.put(generatorId, now);
+            }
+
             // Verificar si ya existe un cliente
             ModbusTcpClient existingClient = clients.get(generatorId);
             ConnectionInfo existingInfo = connectionInfo.get(generatorId);
