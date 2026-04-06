@@ -2,7 +2,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import 'app/config/dayjs';
 
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import { ThemeProvider } from '@mui/material/styles';
 import { Box, CssBaseline } from '@mui/material';
@@ -21,17 +21,32 @@ import AppRoutes from 'app/routes';
 import theme from 'app/shared/layout/theme/mui-theme';
 import { setLocale } from 'app/shared/reducers/locale';
 import { Storage } from 'react-jhipster';
+import Login from 'app/modules/login/login';
+import Home from 'app/modules/home/home';
+import GeneradoresDashboard from 'app/modules/generadores/GeneradoresDashboard';
+import Dashboard from 'app/modules/generadores';
 
 const baseHref = document.querySelector('base').getAttribute('href').replace(/\/$/, '');
 
-export const App = () => {
+// Componente interno que tiene acceso a useLocation
+const AppContent = () => {
   const dispatch = useAppDispatch();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Cerrar sidebar cuando esté en monitor de alarmas
+  useEffect(() => {
+    if (location.pathname === '/alarma/monitor') {
+      setSidebarOpen(false);
+    } else {
+      setSidebarOpen(true);
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     dispatch(getSession());
     dispatch(getProfile());
-  }, []);
+  }, [dispatch]);
 
   const currentLocale = useAppSelector(state => state.locale.currentLocale);
   const isAuthenticated = useAppSelector(state => state.authentication.isAuthenticated);
@@ -48,57 +63,64 @@ export const App = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <BrowserRouter basename={baseHref}>
-        <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-          <ToastContainer position="top-left" className="toastify-container" toastClassName="toastify-toast" />
+      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+        <ToastContainer position="top-left" className="toastify-container" toastClassName="toastify-toast" />
 
-          {isAuthenticated && (
-            <Sidebar
-              isAuthenticated={isAuthenticated}
-              isAdmin={isAdmin}
-              currentLocale={currentLocale}
-              onLocaleChange={handleLocaleChange}
-              open={sidebarOpen}
-              onToggle={() => setSidebarOpen(!sidebarOpen)}
-            />
-          )}
+        {isAuthenticated && (
+          <Sidebar
+            isAuthenticated={isAuthenticated}
+            isAdmin={isAdmin}
+            currentLocale={currentLocale}
+            onLocaleChange={handleLocaleChange}
+            open={sidebarOpen}
+            onToggle={() => setSidebarOpen(!sidebarOpen)}
+          />
+        )}
 
-          <Box
-            component="main"
-            sx={{
-              flexGrow: 1,
-              minHeight: '100vh',
-              display: 'flex',
-              flexDirection: 'column',
-              backgroundColor: '#f8fafc',
-              transition: 'margin-left 0.3s ease',
-            }}
-          >
-            <TopBar isAuthenticated={isAuthenticated} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: '#f8fafc',
+            transition: 'margin-left 0.3s ease',
+          }}
+        >
+          <TopBar isAuthenticated={isAuthenticated} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
-            <Box sx={{ height: 64 }} />
+          <Box sx={{ height: 64 }} />
 
-            <Box sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <Box sx={{ flex: 1 }}>
-                <ErrorBoundary>
-                  <AppRoutes />
-                </ErrorBoundary>
-              </Box>
-              <Footer />
+          <Box sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ flex: 1 }}>
+              <ErrorBoundary>
+                <AppRoutes />
+              </ErrorBoundary>
             </Box>
+            <Footer />
           </Box>
         </Box>
+      </Box>
 
-        <Header
-          isAuthenticated={isAuthenticated}
-          isAdmin={isAdmin}
-          currentLocale={currentLocale}
-          ribbonEnv={ribbonEnv}
-          isInProduction={isInProduction}
-          isOpenAPIEnabled={isOpenAPIEnabled}
-        />
-      </BrowserRouter>
+      <Header
+        isAuthenticated={isAuthenticated}
+        isAdmin={isAdmin}
+        currentLocale={currentLocale}
+        ribbonEnv={ribbonEnv}
+        isInProduction={isInProduction}
+        isOpenAPIEnabled={isOpenAPIEnabled}
+      />
     </ThemeProvider>
+  );
+};
+
+// Componente principal con BrowserRouter
+const App = () => {
+  return (
+    <BrowserRouter basename={baseHref}>
+      <AppContent />
+    </BrowserRouter>
   );
 };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Route } from 'react-router';
+import { Route, Navigate } from 'react-router';
 
 import { useLocation } from 'react-router-dom';
 
@@ -44,7 +44,8 @@ const AppRoutes = () => {
         <Route path="login" element={<Login />} />
         <Route path="logout" element={<Logout />} />
         <Route path="generadores" element={<GeneradoresDashboard />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="inicio" element={<Navigate to="/dashboard" replace />} />
         <Route path="account">
           <Route
             path="*"

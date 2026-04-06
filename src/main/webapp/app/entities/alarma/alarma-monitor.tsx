@@ -257,7 +257,13 @@ export const AlarmaMonitor = () => {
             <Chip icon={<WarningAmberIcon />} label={`${activasCount} activa${activasCount > 1 ? 's' : ''}`} color="error" size="medium" />
           )}
           {reconocidasCount > 0 && (
-            <Chip label={`${reconocidasCount} reconocida${reconocidasCount > 1 ? 's' : ''}`} color="warning" size="small" />
+            <Chip
+              icon={<CheckCircleIcon />}
+              label={`${reconocidasCount} reconocida${reconocidasCount > 1 ? 's' : ''}`}
+              color="warning"
+              size="medium"
+              sx={{ ml: 1 }}
+            />
           )}
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
@@ -366,10 +372,23 @@ export const AlarmaMonitor = () => {
                     </TableCell>
                     <TableCell>
                       <Chip
+                        icon={
+                          alarma.estado === 'ACTIVA' ? (
+                            <WarningAmberIcon sx={{ fontSize: 16 }} />
+                          ) : (
+                            <CheckCircleIcon sx={{ fontSize: 16 }} />
+                          )
+                        }
                         label={alarma.estado === 'ACTIVA' ? 'ACTIVA' : 'RECONOCIDA'}
                         color={alarma.estado === 'ACTIVA' ? 'error' : 'warning'}
                         size="small"
                         variant={alarma.estado === 'ACTIVA' ? 'filled' : 'outlined'}
+                        sx={{
+                          '& .MuiChip-icon': { ml: 1 },
+                          fontWeight: 600,
+                          minWidth: 110,
+                          justifyContent: 'flex-start',
+                        }}
                       />
                     </TableCell>
                     <TableCell>

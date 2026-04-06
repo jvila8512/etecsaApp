@@ -14,7 +14,8 @@
 }
 
 .app-loading img {
-  max-width: 280px;
+  max-width: 180px;
+  width: 100%;
   height: auto;
   animation: pulse-logo 2s ease-in-out infinite;
 }

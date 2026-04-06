@@ -1,7 +1,7 @@
 import './home.scss';
 
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
@@ -34,6 +34,7 @@ import WifiIcon from '@mui/icons-material/Wifi';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import LockIcon from '@mui/icons-material/Lock';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import { useAppSelector, useAppDispatch } from 'app/config/store';
 
 import {
@@ -105,6 +106,7 @@ const NotLoggedView = () => (
 
 export const Home = () => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const account = useAppSelector(state => state.authentication.account);
   const equipos = useAppSelector(getDashboardEquipos);
   const isConnected = useAppSelector(getDashboardConnected);
@@ -188,6 +190,16 @@ export const Home = () => {
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Button
+            variant="outlined"
+            color="error"
+            size="small"
+            startIcon={<NotificationsActiveIcon />}
+            onClick={() => navigate('/alarma/monitor')}
+            sx={{ fontWeight: 600 }}
+          >
+            Monitor de Alarmas
+          </Button>
           <TextField
             size="small"
             placeholder="Buscar equipo, IP o estado..."

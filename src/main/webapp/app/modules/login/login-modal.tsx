@@ -1,8 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Translate, ValidatedField, translate } from 'react-jhipster';
 import { Link } from 'react-router-dom';
 import { type FieldError, useForm } from 'react-hook-form';
-import { Alert, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, Typography, Link as MuiLink } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography,
+  Link as MuiLink,
+  CircularProgress,
+} from '@mui/material';
+import LockResetIcon from '@mui/icons-material/LockReset';
+import HowToRegIcon from '@mui/icons-material/HowToReg';
+import LoginIcon from '@mui/icons-material/Login';
 
 export interface ILoginModalProps {
   showModal: boolean;
@@ -12,8 +26,13 @@ export interface ILoginModalProps {
 }
 
 const LoginModal = (props: ILoginModalProps) => {
+  const [loading, setLoading] = useState(false);
+
   const login = ({ username, password, rememberMe }) => {
+    setLoading(true);
     props.handleLogin(username, password, rememberMe);
+    // Reset loading after a timeout in case the redirect doesn't happen
+    setTimeout(() => setLoading(false), 3000);
   };
 
   const {
@@ -31,9 +50,14 @@ const LoginModal = (props: ILoginModalProps) => {
   return (
     <Dialog open={props.showModal} onClose={handleClose} maxWidth="xs" fullWidth>
       <form onSubmit={handleLoginSubmit}>
-        <DialogTitle id="login-title" data-cy="loginTitle">
-          <Translate contentKey="login.title">Sign in</Translate>
-        </DialogTitle>
+        {/* Logo y Título */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', pt: 3, pb: 1 }}>
+          <Box component="img" src="content/images/logotipo-etecsa.jpg" alt="ETECSA" sx={{ height: 60, objectFit: 'contain', mb: 2 }} />
+          <DialogTitle id="login-title" data-cy="loginTitle" sx={{ textAlign: 'center', p: 0, fontWeight: 700, fontSize: '1.3rem' }}>
+            Sistema de Supervisión y Control
+          </DialogTitle>
+        </Box>
+
         <DialogContent>
           {loginError ? (
             <Alert severity="error" data-cy="loginError" sx={{ mb: 2 }}>
@@ -78,16 +102,25 @@ const LoginModal = (props: ILoginModalProps) => {
             />
           </Box>
 
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            <MuiLink component={Link} to="/account/reset/request" data-cy="forgetYourPasswordSelector" underline="hover">
+          {/* Olvidaste tu contraseña */}
+          <Alert severity="info" icon={<LockResetIcon />} sx={{ mt: 2 }}>
+            <MuiLink
+              component={Link}
+              to="/account/reset/request"
+              data-cy="forgetYourPasswordSelector"
+              underline="hover"
+              sx={{ fontWeight: 500 }}
+            >
               <Translate contentKey="login.password.forgot">Did you forget your password?</Translate>
             </MuiLink>
           </Alert>
-          <Alert severity="warning" sx={{ mt: 1 }}>
+
+          {/* Crear cuenta */}
+          <Alert severity="info" icon={<HowToRegIcon />} sx={{ mt: 1 }}>
             <span>
-              <Translate contentKey="global.messages.info.register.noaccount">You don&apos;t have an account yet?</Translate>
+              <Translate contentKey="global.messages.info.register.noaccount">You don&apo;t have an account yet?</Translate>
             </span>{' '}
-            <MuiLink component={Link} to="/account/register" underline="hover">
+            <MuiLink component={Link} to="/account/register" underline="hover" sx={{ fontWeight: 500 }}>
               <Translate contentKey="global.messages.info.register.link">Register a new account</Translate>
             </MuiLink>
           </Alert>
@@ -96,8 +129,14 @@ const LoginModal = (props: ILoginModalProps) => {
           <Button onClick={handleClose} color="inherit">
             <Translate contentKey="entity.action.cancel">Cancel</Translate>
           </Button>
-          <Button type="submit" variant="contained" data-cy="submit">
-            <Translate contentKey="login.form.button">Sign in</Translate>
+          <Button
+            type="submit"
+            variant="contained"
+            data-cy="submit"
+            disabled={loading}
+            startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <LoginIcon />}
+          >
+            {loading ? 'Conectando...' : <Translate contentKey="login.form.button">Sign in</Translate>}
           </Button>
         </DialogActions>
       </form>

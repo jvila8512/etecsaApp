@@ -16,10 +16,12 @@ import {
   Tooltip,
   InputAdornment,
   Divider,
+  Button,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import SearchIcon from '@mui/icons-material/Search';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -95,6 +97,35 @@ const TopBar: React.FC<TopBarProps> = ({ isAuthenticated, onToggleSidebar }) => 
         <Box sx={{ flexGrow: 1 }} />
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {/* Botón Monitor de Alarmas */}
+          {isAuthenticated && (
+            <>
+              <Tooltip title="Monitor de Alarmas">
+                <IconButton color="error" onClick={() => navigate('/alarma/monitor')} sx={{ display: { xs: 'flex', md: 'none' } }}>
+                  <NotificationsActiveIcon />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Monitor de Alarmas">
+                <Button
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  startIcon={<NotificationsActiveIcon />}
+                  onClick={() => navigate('/alarma/monitor')}
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: '0.75rem',
+                    py: 0.5,
+                    px: 1.5,
+                    display: { xs: 'none', md: 'flex' },
+                  }}
+                >
+                  Alarmas
+                </Button>
+              </Tooltip>
+            </>
+          )}
+
           {/* Notificaciones */}
           {isAuthenticated && (
             <>
