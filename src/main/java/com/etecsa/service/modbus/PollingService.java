@@ -314,40 +314,40 @@ public class PollingService {
      */
     private void detectarAlarma(EventoEquipo ev, Boolean valorBooleano, Double valorNumerico) {
         // Solo procesar si tiene habilitadas las alarmas
-        LOG.info(
-            ">>> DETECTAR ALARMA: variable={}, habilitarAlarma={}, umbral={}, bool={}, num={}",
-            ev.getNombreVariable(),
-            ev.getHabilitarAlarma(),
-            ev.getUmbralAlerta(),
-            valorBooleano,
-            valorNumerico
-        );
+        // LOG.info(
+        //     ">>> DETECTAR ALARMA: variable={}, habilitarAlarma={}, umbral={}, bool={}, num={}",
+        //     ev.getNombreVariable(),
+        //     ev.getHabilitarAlarma(),
+        //     ev.getUmbralAlerta(),
+        //     valorBooleano,
+        //     valorNumerico
+        // );
 
         if (ev.getHabilitarAlarma() == null || !ev.getHabilitarAlarma()) {
-            LOG.info(">>> RETORNO: habilitarAlarma es null o false");
+            // LOG.info(">>> RETORNO: habilitarAlarma es null o false");
             return;
         }
 
         // Solo procesar si tiene umbral configurado (para numeric)
         // Boolean no necesita umbral - se activa cuando valor=true
         Boolean esBooleano = valorBooleano != null;
-        LOG.info(">>> DETECTAR: esBooleano={}", esBooleano);
+        // LOG.info(">>> DETECTAR: esBooleano={}", esBooleano);
         if (!esBooleano && ev.getUmbralAlerta() == null) {
-            LOG.info(">>> RETORNO: numérica sin umbral");
+            // LOG.info(">>> RETORNO: numérica sin umbral");
             return;
         }
 
         // Evitar detecciones muy seguidas (cada 1 segundo maximo)
         long now = System.currentTimeMillis();
         Long lastCheck = lastAlarmCheck.get(ev.getId());
-        LOG.info(">>> DETECTAR: lastCheck={}, now={}, diff={}", lastCheck, now, lastCheck != null ? (now - lastCheck) : "N/A");
+        // LOG.info(">>> DETECTAR: lastCheck={}, now={}, diff={}", lastCheck, now, lastCheck != null ? (now - lastCheck) : "N/A");
         if (lastCheck != null && (now - lastCheck) < 1000) {
-            LOG.info(">>> RETORNO: throttle (diff < 1000ms)");
+            // LOG.info(">>> RETORNO: throttle (diff < 1000ms)");
             return;
         }
         lastAlarmCheck.put(ev.getId(), now);
 
-        LOG.info(">>> PASÓ THROTTLE, entrando en detección de alarma");
+        // LOG.info(">>> PASÓ THROTTLE, entrando en detección de alarma");
 
         boolean esAlarma = false;
 

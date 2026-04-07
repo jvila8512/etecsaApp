@@ -55,8 +55,9 @@ public class GeneradoresWebSocketService {
 
     /**
      * CONECTAR TODOS LOS GRUPOS AUTOMÁTICAMENTE al iniciar
+     * DESACTIVADO - No usar más, el sistema usa PollingService
      */
-    @PostConstruct
+    // @PostConstruct
     public void conectarGruposAutomaticamente() {
         log.info("🔌 Intentando conexión automática de grupos...");
 
@@ -141,11 +142,6 @@ public class GeneradoresWebSocketService {
 
         return datos;
     }
-
-    /**
-     * ENVÍO AUTOMÁTICO - Datos en tiempo real cada 2 segundos
-     *  @Scheduled(fixedRate = 2000)
-     */
 
     public void enviarDatosTiempoReal() {
         try {
@@ -526,8 +522,9 @@ public class GeneradoresWebSocketService {
 
     /**
      * ENVÍA ESTADÍSTICAS DEL SISTEMA
+     * DESACTIVADO - No usar más, el sistema usa PollingService
      */
-    @Scheduled(fixedRate = 30000) // Cada 30 segundos
+    // @Scheduled(fixedRate = 30000) // Cada 30 segundos
     public void enviarEstadisticasSistema() {
         Map<String, Object> stats = new HashMap<>();
         stats.put("type", "ESTADISTICAS");

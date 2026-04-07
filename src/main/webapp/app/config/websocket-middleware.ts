@@ -26,7 +26,7 @@ const createListener = (): Observable<any> =>
 export const sendActivity = (page: string) => {
   connection?.then(() => {
     stompClient?.send(
-      '/topic/activity', // destination
+      '/app/activity', // destination - el prefijo /app va al backend
       JSON.stringify({ page }), // body
       {}, // header
     );
@@ -62,12 +62,19 @@ const connect = () => {
   const socket = new SockJS(url);
   stompClient = Stomp.over(socket, { protocols: ['v12.stomp'] });
 
-  stompClient.connect(headers, () => {
-    connectedPromise('success');
-    connectedPromise = null;
-    sendActivity(window.location.pathname);
-    alreadyConnectedOnce = true;
-  });
+  stompClient.connect(
+    headers,
+    () => {
+      console.warn('*********************TRACKER********************* - Conectado al WebSocket');
+      connectedPromise('success');
+      connectedPromise = null;
+      sendActivity(window.location.pathname);
+      alreadyConnectedOnce = true;
+    },
+    error => {
+      console.warn('*********************TRACKER********************* - Error de conexión:', error);
+    },
+  );
 };
 
 const disconnect = () => {
@@ -90,18 +97,35 @@ const unsubscribe = () => {
 };
 
 export default store => next => action => {
+  console.warn('*********************TRACKER********************* - Acción:', action.type);
   if (getAccount.fulfilled.match(action)) {
-    connect();
-    const isAdmin = action.payload.data.authorities.includes('ROLE_ADMIN');
+    const authorities = action.payload?.data?.authorities || [];
+    console.warn('*********************TRACKER********************* - Authorities:', authorities);
+    const isAdmin = authorities.includes('ROLE_ADMIN') || authorities.includes('ADMIN');
+    console.warn('*********************TRACKER********************* - isAdmin:', isAdmin);
     if (!alreadyConnectedOnce && isAdmin) {
+      console.warn('*********************TRACKER********************* - Conectando WebSocket...');
+      connect();
       subscribe();
       receive().subscribe(activity => {
-        return store.dispatch(websocketActivityMessage(activity));
+        console.warn('*********************TRACKER********************* - Activity:', activity);
+        store.dispatch(websocketActivityMessage(activity));
       });
+    } else if (!alreadyConnectedOnce) {
+      console.warn('*********************TRACKER********************* - No admin, conectando...');
+      connect();
     }
   } else if (getAccount.rejected.match(action) || action.type === logoutSession().type) {
     unsubscribe();
     disconnect();
   }
   return next(action);
+};
+
+// También exportar función para llamar manualmente
+export const manuallySubscribeToTracker = () => {
+  subscribe();
+  receive().subscribe(activity => {
+    console.warn('*********************TRACKER********************* - Activity manualmente:', activity);
+  });
 };
