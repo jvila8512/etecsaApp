@@ -77,58 +77,13 @@ export const AdministrationSlice = createSlice({
   initialState: initialState as AdministrationState,
   reducers: {
     websocketActivityMessage(state, action) {
+      console.warn('TRACKER REDUCER - Received activity:', action.payload);
       // filter out activities from the same session
       const uniqueActivities = state.tracker.activities.filter(activity => activity.sessionId !== action.payload.sessionId);
       // remove any activities with the page of logout
       const activities = [...uniqueActivities, action.payload].filter(activity => activity.page !== 'logout');
       state.tracker = { activities };
     },
-  },
-  extraReducers(builder) {
-    builder
-      .addCase(getSystemHealth.fulfilled, (state, action) => {
-        state.loading = false;
-        state.health = action.payload.data;
-      })
-      .addCase(getSystemMetrics.fulfilled, (state, action) => {
-        state.loading = false;
-        state.metrics = action.payload.data;
-      })
-      .addCase(getSystemThreadDump.fulfilled, (state, action) => {
-        state.loading = false;
-        state.threadDump = action.payload.data;
-      })
-      .addCase(getLoggers.fulfilled, (state, action) => {
-        state.loading = false;
-        state.logs = {
-          loggers: action.payload.data.loggers,
-        };
-      })
-      .addCase(getConfigurations.fulfilled, (state, action) => {
-        state.loading = false;
-        state.configuration = {
-          ...state.configuration,
-          configProps: action.payload.data,
-        };
-      })
-      .addCase(getEnv.fulfilled, (state, action) => {
-        state.loading = false;
-        state.configuration = {
-          ...state.configuration,
-          env: action.payload.data,
-        };
-      })
-      .addMatcher(isPending(getSystemHealth, getSystemMetrics, getSystemThreadDump, getLoggers, getConfigurations, getEnv), state => {
-        state.errorMessage = null;
-        state.loading = true;
-      })
-      .addMatcher(
-        isRejected(getSystemHealth, getSystemMetrics, getSystemThreadDump, getLoggers, getConfigurations, getEnv),
-        (state, action) => {
-          state.errorMessage = action.error.message;
-          state.loading = false;
-        },
-      );
   },
 });
 

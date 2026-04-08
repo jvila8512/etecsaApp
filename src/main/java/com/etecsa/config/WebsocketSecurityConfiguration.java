@@ -18,6 +18,9 @@ public class WebsocketSecurityConfiguration extends AbstractSecurityWebSocketMes
             // Solo administradores pueden suscribirse a /topic/tracker
             .simpDestMatchers("/topic/tracker")
             .hasAuthority(AuthoritiesConstants.ADMIN)
+            // Permite mensajes de actividad (/app/activity)
+            .simpDestMatchers("/app/**")
+            .authenticated()
             // Cualquier suscripción a /topic/** (incluye /topic/generadores/** y /topic/dashboard)
             // requiere un usuario autenticado (ROLE_USER o superior)
             .simpDestMatchers("/topic/**")

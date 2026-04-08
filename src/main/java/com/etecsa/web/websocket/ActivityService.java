@@ -28,20 +28,17 @@ public class ActivityService implements ApplicationListener<SessionDisconnectEve
     @MessageMapping("/activity")
     @SendTo("/topic/tracker")
     public ActivityDTO sendActivity(@Payload ActivityDTO activityDTO, StompHeaderAccessor stompHeaderAccessor, Principal principal) {
+        LOG.info(">>> TRACKER: Recibido mensaje de actividad, principal={}", principal != null ? principal.getName() : "null");
         try {
-            LOG.info(
-                "*********************TRACKER********************* - Recibida actividad de {}",
-                principal != null ? principal.getName() : "unknown"
-            );
             activityDTO.setUserLogin(principal != null ? principal.getName() : "unknown");
             activityDTO.setSessionId(stompHeaderAccessor.getSessionId());
             Object ipAddr = stompHeaderAccessor.getSessionAttributes().get(IP_ADDRESS);
             activityDTO.setIpAddress(ipAddr != null ? ipAddr.toString() : "unknown");
             activityDTO.setTime(Instant.now());
-            LOG.info("*********************TRACKER********************* - Enviando {}", activityDTO);
+            LOG.info(">>> TRACKER: Enviando respuesta: {}", activityDTO);
             return activityDTO;
         } catch (Exception e) {
-            LOG.error("*********************TRACKER********************* - Error procesando actividad", e);
+            LOG.error(">>> TRACKER: Error", e);
             return activityDTO;
         }
     }
