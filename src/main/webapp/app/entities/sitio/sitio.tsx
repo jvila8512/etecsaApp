@@ -8,6 +8,7 @@ import { APP_DATE_FORMAT } from 'app/config/constants';
 import { ASC, DESC, ITEMS_PER_PAGE, SORT } from 'app/shared/util/pagination.constants';
 import { overridePaginationStateWithQueryParams } from 'app/shared/util/entity-utils';
 import { useAppDispatch, useAppSelector } from 'app/config/store';
+import { Box, CircularProgress } from '@mui/material';
 
 import { getEntities } from './sitio.reducer';
 
@@ -105,6 +106,14 @@ export const Sitio = () => {
           </Link>
         </div>
       </h2>
+
+      {/* Loading indicator */}
+      {loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress size={40} sx={{ color: '#2563eb' }} />
+        </Box>
+      )}
+
       <div className="table-responsive">
         {sitioList && sitioList.length > 0 ? (
           <Table responsive>

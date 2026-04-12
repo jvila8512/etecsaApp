@@ -29,13 +29,26 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import WarningIcon from '@mui/icons-material/Warning';
 import InfoIcon from '@mui/icons-material/Info';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { IUser } from 'app/shared/model/user.model';
 
 interface TopBarProps {
   isAuthenticated: boolean;
   onToggleSidebar: () => void;
+  account?: IUser;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ isAuthenticated, onToggleSidebar }) => {
+const TopBar: React.FC<TopBarProps> = ({ isAuthenticated, onToggleSidebar, account }) => {
+  const getUserInitials = () => {
+    if (!account) return '?';
+    const first = account.firstName?.[0] || '';
+    const last = account.lastName?.[0] || '';
+    return (first + last).toUpperCase() || account.login?.[0].toUpperCase() || '?';
+  };
+
+  const getUserDisplayName = () => {
+    if (!account) return 'Usuario';
+    return `${account.firstName || ''} ${account.lastName || ''}`.trim() || account.login || 'Usuario';
+  };
   const navigate = useNavigate();
   const [anchorElUser, setAnchorElUser] = useState<null | HTMLElement>(null);
   const [anchorElNotif, setAnchorElNotif] = useState<null | HTMLElement>(null);
@@ -179,28 +192,37 @@ const TopBar: React.FC<TopBarProps> = ({ isAuthenticated, onToggleSidebar }) => 
           {/* Cuenta Usuario */}
           {isAuthenticated ? (
             <>
-              <Tooltip title="Cuenta">
+              <Tooltip title={getUserDisplayName()}>
                 <IconButton onClick={handleOpenUserMenu} color="inherit">
-                  <Avatar sx={{ width: 36, height: 36, bgcolor: '#2563eb' }}>
-                    <AccountCircleIcon />
-                  </Avatar>
+                  {account?.imageUrl ? (
+                    <Avatar src={account.imageUrl} sx={{ width: 36, height: 36 }} />
+                  ) : (
+                    <Avatar sx={{ width: 36, height: 36, bgcolor: '#2563eb' }}>{getUserInitials()}</Avatar>
+                  )}
                 </IconButton>
               </Tooltip>
               <Menu
                 anchorEl={anchorElUser}
                 open={Boolean(anchorElUser)}
                 onClose={handleCloseUserMenu}
-                PaperProps={{ sx: { width: 220 } }}
+                PaperProps={{ sx: { width: 240 } }}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'right' }}
               >
-                <Box sx={{ px: 2, py: 1.5, bgcolor: '#f8fafc' }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                    Usuario
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    usuario@etecsa.cu
-                  </Typography>
+                <Box sx={{ px: 2, py: 1.5, bgcolor: '#f8fafc', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  {account?.imageUrl ? (
+                    <Avatar src={account.imageUrl} sx={{ width: 40, height: 40 }} />
+                  ) : (
+                    <Avatar sx={{ width: 40, height: 40, bgcolor: '#2563eb' }}>{getUserInitials()}</Avatar>
+                  )}
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                      {getUserDisplayName()}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {account?.email}
+                    </Typography>
+                  </Box>
                 </Box>
                 <Divider />
                 <MenuItem

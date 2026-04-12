@@ -227,3 +227,15 @@ jhipster:
 # ===================================================================
 
 # application:
+# ===================================================================
+# Upload Configuration
+# ===================================================================
+app:
+  upload:
+    root: uploads
+    allowed-folders:
+      - profile
+      - alarmas
+      - equipos
+      - eventos
+      - documentos

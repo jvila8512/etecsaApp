@@ -50,6 +50,7 @@ const AppContent = () => {
 
   const currentLocale = useAppSelector(state => state.locale.currentLocale);
   const isAuthenticated = useAppSelector(state => state.authentication.isAuthenticated);
+  const account = useAppSelector(state => state.authentication.account);
   const isAdmin = useAppSelector(state => hasAnyAuthority(state.authentication.account.authorities, [AUTHORITIES.ADMIN]));
   const ribbonEnv = useAppSelector(state => state.applicationProfile.ribbonEnv);
   const isInProduction = useAppSelector(state => state.applicationProfile.inProduction);
@@ -88,7 +89,7 @@ const AppContent = () => {
             transition: 'margin-left 0.3s ease',
           }}
         >
-          <TopBar isAuthenticated={isAuthenticated} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+          <TopBar isAuthenticated={isAuthenticated} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} account={account} />
 
           <Box sx={{ height: 64 }} />
 

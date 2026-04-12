@@ -7,6 +7,7 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -426,6 +427,13 @@ export const Alarma = () => {
           </Button>
         </Box>
       </Toolbar>
+
+      {/* Loading indicator */}
+      {loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress size={40} sx={{ color: '#2563eb' }} />
+        </Box>
+      )}
 
       <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
         <TextField
